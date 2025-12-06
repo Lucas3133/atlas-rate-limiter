@@ -8,6 +8,18 @@
 
 > Rate limiter distribuído de alta performance usando Redis + Token Bucket Algorithm
 
+---
+
+## 🌐 Demo ao Vivo
+
+**✨ Acesse o projeto funcionando:** [https://atlas-rate-limiter.onrender.com](https://atlas-rate-limiter.onrender.com)
+
+![Atlas Rate Limiter Dashboard](https://raw.githubusercontent.com/Lucas3133/atlas-rate-limiter/main/.github/screenshots/dashboard.png)
+
+*Dashboard interativo com métricas em tempo real, estatísticas de rate limiting e endpoints para teste*
+
+---
+
 ## 🚀 Quick Start
 
 ### Opção 1: Docker (Recomendado)
