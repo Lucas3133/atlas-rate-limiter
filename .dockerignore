@@ -1,0 +1,48 @@
+# ================================================================
+# ATLAS RATE LIMITER - DOCKERIGNORE
+# ================================================================
+# Arquivos que NÃO devem ir para a imagem Docker
+# ================================================================
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Ambiente (NUNCA incluir credenciais!)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# Testes
+tests/
+*.test.js
+coverage/
+
+# Documentação
+README.md
+ARCHITECTURE.md
+docs/
+
+# CI/CD
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml

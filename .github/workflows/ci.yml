@@ -1,0 +1,110 @@
+# ================================================================
+# ATLAS RATE LIMITER - CI/CD PIPELINE
+# ================================================================
+# QA-001: Testes automáticos a cada push
+# ================================================================
+
+name: CI - Atlas Rate Limiter
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # ============================================================
+  # LINT & SYNTAX CHECK
+  # ============================================================
+  lint:
+    name: 🔍 Lint & Syntax
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔍 Check syntax
+        run: |
+          node -c src/index.js
+          node -c src/config/index.js
+          node -c tests/load/loadTest.js
+
+  # ============================================================
+  # SECURITY AUDIT
+  # ============================================================
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: 🔒 Audit dependencies
+        run: npm audit --audit-level=moderate
+
+  # ============================================================
+  # DOCKER BUILD TEST
+  # ============================================================
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🏗️ Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: atlas-rate-limiter:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # LOAD TEST (Opcional - requer Redis)
+  # ============================================================
+  # load-test:
+  #   name: 🔥 Load Test
+  #   runs-on: ubuntu-latest
+  #   
+  #   services:
+  #     redis:
+  #       image: redis:7-alpine
+  #       ports:
+  #         - 6379:6379
+  #   
+  #   steps:
+  #     - name: 📥 Checkout code
+  #       uses: actions/checkout@v4
+  #     
+  #     - name: 🟢 Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     
+  #     - name: 📦 Install dependencies
+  #       run: npm ci
+  #     
+  #     - name: 🔥 Run load test
+  #       run: npm run test:load

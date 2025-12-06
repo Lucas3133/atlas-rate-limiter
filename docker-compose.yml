@@ -1,0 +1,54 @@
+# ================================================================
+# ATLAS RATE LIMITER - DOCKER COMPOSE
+# ================================================================
+# OPS-001: Deploy local com 1 comando
+# ================================================================
+
+version: '3.8'
+
+services:
+  # ============================================================
+  # ATLAS RATE LIMITER
+  # ============================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: atlas-rate-limiter:latest
+    container_name: atlas-shield
+    
+    ports:
+      - "${PORT:-3000}:3000"
+    
+    environment:
+      # Ler do .env local
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
+      - RATE_LIMIT_CAPACITY=${RATE_LIMIT_CAPACITY:-100}
+      - RATE_LIMIT_REFILL_RATE=${RATE_LIMIT_REFILL_RATE:-1}
+      - REDIS_TIMEOUT_MS=${REDIS_TIMEOUT_MS:-2000}
+      - TRUST_PROXY=${TRUST_PROXY:-false}
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Logs estruturados
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================
+# NETWORKS (Opcional - para múltiplos serviços)
+# ============================================================
+networks:
+  default:
+    name: atlas-network

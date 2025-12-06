@@ -1,0 +1,27 @@
+# Dependências
+node_modules/
+
+# Variáveis de Ambiente (NUNCA COMMITAR!)
+.env
+
+# Logs
+*.log
+logs/
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Testes
+coverage/
+.nyc_output/
