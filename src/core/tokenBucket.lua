@@ -62,11 +62,11 @@ if tokens >= cost then
   -- Atualizar estado no Redis
   redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
   
-  -- OPT-001: TTL otimizado (1h ao invés de 24h)
-  -- Por que 1h? IPs de ataque único não devem lotar RAM
-  -- Se cliente voltar em < 1h, mantém estado
-  -- Se sumir, libera memória rápido
-  redis.call('EXPIRE', key, 3600)
+  -- IMP-003: TTL dinâmico otimizado
+  -- Se usuário tem muitas fichas (>50%), é provavelmente legítimo → TTL maior (2h)
+  -- Se usuário tem poucas fichas, pode ser ataque → TTL menor (1h)
+  local ttl = tokens > capacity * 0.5 and 7200 or 3600
+  redis.call('EXPIRE', key, ttl)
 else
   -- SEM FICHAS - BLOQUEIA
   allowed = 0
@@ -75,6 +75,8 @@ else
   -- BUG FIX: Atualizar last_refill mesmo quando bloqueado
   -- Previne acúmulo de fichas durante período de bloqueio
   redis.call('HSET', key, 'last_refill', last_refill)
+  
+  -- IMP-003: Atacantes bloqueados expiram em 1h (não lotam Redis)
   redis.call('EXPIRE', key, 3600)
 end
 
