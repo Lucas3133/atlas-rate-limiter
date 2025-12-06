@@ -8,6 +8,17 @@ const { healthCheck } = require('./core/redisClient');
 const config = require('./config');
 const logger = require('./utils/logger');
 
+// ============================================================
+// IMP-001: CONSTANTES DE RATE LIMIT (evita magic numbers)
+// ============================================================
+const RATE_LIMITS = {
+    LOGIN: { capacity: 5, refillRate: 1 },        // Login: 5 tentativas/5s
+    ADMIN: { capacity: 1000, refillRate: 100 },   // Admin: 1000 req/10s
+    METRICS: { capacity: 50, refillRate: 5 },     // Metrics: 50 req/10s
+    STATIC: { capacity: 500, refillRate: 50 },    // Static: 500 req/10s
+    PUBLIC: null                                   // Public: usa padrão do config
+};
+
 const app = express();
 
 // FIX-002: Trust Proxy configurável via TRUST_PROXY no .env
@@ -19,22 +30,25 @@ app.set('trust proxy', config.security.trustProxy);
 app.use(express.json());
 
 // ============================================================
-// SEC-003: PROTEÇÃO DE ARQUIVOS ESTÁTICOS
+// BUG-004 FIX: PROTEÇÃO DE ARQUIVOS ESTÁTICOS
 // ============================================================
-// Aplicar rate limit LEVE nos estáticos para prevenir DDoS
-// Usa 500 req/min (mais permissivo que APIs, mas protegido)
+// Antes: arquivos em /public sem proteção (vulnerável a DDoS)
+// Agora: rate limit generoso (500 req/50s = 10 req/s)
+// Não afeta usuários normais, mas previne ataques volumétricos
 // ============================================================
-app.use(express.static('public', {
-    // Sem rate limit inline - Express serve direto (performance)
-    // Proteção vem do CDN/proxy em produção
-}));
+app.use('/public', rateLimiter(RATE_LIMITS.STATIC));
+app.use(express.static('public'));
 
 // ============================================================
-// DEBUG: Logger de TODAS as requisições
+// IMP-002: Logger estruturado de TODAS as requisições
 // ============================================================
 app.use((req, res, next) => {
-    const timestamp = new Date().toLocaleTimeString('pt-BR');
-    console.log(`\n🌐 [${timestamp}] ${req.method} ${req.path}`);
+    logger.debug({
+        event_type: 'http_request',
+        method: req.method,
+        path: req.path,
+        ip: req.ip
+    });
     next();
 });
 
@@ -56,8 +70,8 @@ app.get('/health', async (req, res) => {
     });
 });
 
-// FEAT-001: Prometheus Metrics (sem rate limit)
-app.get('/metrics', (req, res) => {
+// FEAT-001: Prometheus Metrics (BUG-001 FIX: COM rate limit para prevenir DDoS)
+app.get('/metrics', rateLimiter(RATE_LIMITS.METRICS), (req, res) => {
     const metrics = require('./utils/metrics');
     res.setHeader('Content-Type', 'text/plain; version=0.0.4');
     res.send(metrics.toPrometheus());
@@ -73,7 +87,7 @@ app.get('/api/public', rateLimiter(), (req, res) => {
 });
 
 // Rota de login (rate limit RESTRITIVO)
-app.post('/api/login', rateLimiter({ capacity: 5, refillRate: 1 }), (req, res) => {
+app.post('/api/login', rateLimiter(RATE_LIMITS.LOGIN), (req, res) => {
     res.json({
         message: 'Login simulado (5 tentativas por 5 segundos)',
         note: 'Em produção, aqui verificaria credenciais'
@@ -81,7 +95,7 @@ app.post('/api/login', rateLimiter({ capacity: 5, refillRate: 1 }), (req, res) =
 });
 
 // Rota de TESTE de login (GET pra testar fácil no navegador!)
-app.get('/api/login-test', rateLimiter({ capacity: 5, refillRate: 1 }), (req, res) => {
+app.get('/api/login-test', rateLimiter(RATE_LIMITS.LOGIN), (req, res) => {
     res.json({
         message: '🧪 Teste de Rate Limit - Login',
         limit: '5 requisições a cada 5 segundos',
@@ -91,20 +105,25 @@ app.get('/api/login-test', rateLimiter({ capacity: 5, refillRate: 1 }), (req, re
 });
 
 // Rota administrativa (rate limit PERMISSIVO)
-app.get('/api/admin', rateLimiter({ capacity: 1000, refillRate: 100 }), (req, res) => {
+app.get('/api/admin', rateLimiter(RATE_LIMITS.ADMIN), (req, res) => {
     res.json({
         message: 'Rota admin com rate limit alto',
         timestamp: new Date().toISOString()
     });
 });
 
-// Rota SEM rate limit (para demonstração)
-app.get('/api/no-limit', (req, res) => {
-    res.json({
-        message: 'Esta rota NÃO tem rate limit aplicado',
-        warning: 'Use com cuidado em produção!'
+// BUG-002 FIX: Rota SEM rate limit (APENAS EM DESENVOLVIMENTO)
+// ⚠️ SEGURANÇA: Esta rota só existe em dev para testes
+// Em produção, bypassaria toda a proteção do rate limiter
+if (config.env === 'development') {
+    app.get('/api/no-limit', (req, res) => {
+        res.json({
+            message: 'Esta rota NÃO tem rate limit aplicado',
+            warning: 'Disponível APENAS em ambiente de desenvolvimento',
+            environment: config.env
+        });
     });
-});
+}
 
 // Rota 404
 app.use((req, res) => {
