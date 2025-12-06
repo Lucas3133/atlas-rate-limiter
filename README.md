@@ -35,6 +35,17 @@ npm start
 
 ## 📦 Deploy em Produção
 
+### 🚀 CI/CD Automático (Recomendado)
+```bash
+# 1. Configure o Render (veja guia abaixo)
+# 2. Push para main dispara deploy automático
+git push origin main
+
+# ✅ Deploy automático via GitHub Actions!
+```
+
+📚 **Guia Completo**: [CI_CD_SETUP.md](CI_CD_SETUP.md)
+
 ### Railway / Render / Vercel
 ```bash
 # Configure estas variáveis de ambiente:

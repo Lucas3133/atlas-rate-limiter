@@ -1,0 +1,46 @@
+# ================================================================
+# RENDER.COM - CONFIGURATION FILE
+# ================================================================
+# Blueprint para deploy automático no Render
+# ================================================================
+
+services:
+  # ============================================================
+  # WEB SERVICE - Atlas Rate Limiter
+  # ============================================================
+  - type: web
+    name: atlas-rate-limiter
+    env: node
+    region: oregon # Ou: frankfurt, singapore, ohio
+    plan: free # Ou: starter, standard, pro
+    
+    # Build Configuration
+    buildCommand: npm install --production=false
+    startCommand: npm start
+    
+    # Health Check
+    healthCheckPath: /health
+    
+    # Auto Deploy
+    autoDeploy: true
+    
+    # Environment Variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 3000
+      
+      - key: TRUST_PROXY
+        value: "1"
+      
+      - key: RATE_LIMIT_CAPACITY
+        value: "100"
+      
+      - key: RATE_LIMIT_REFILL_RATE
+        value: "1"
+      
+      # ⚠️ IMPORTANTE: Configure no Render Dashboard (não commitar!)
+      - key: UPSTASH_REDIS_URL
+        sync: false # Secret - não compartilhar

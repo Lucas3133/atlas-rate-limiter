@@ -1,0 +1,65 @@
+# ================================================================
+# ATLAS RATE LIMITER - CONTINUOUS DEPLOYMENT
+# ================================================================
+# Deploy automático para Render quando push na main
+# ================================================================
+
+name: CD - Deploy to Render
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite deploy manual
+
+jobs:
+  # ============================================================
+  # NOTIFICAR RENDER PARA FAZER DEPLOY
+  # ============================================================
+  deploy:
+    name: 🚀 Deploy to Render
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🚀 Trigger Render Deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "⚠️ RENDER_DEPLOY_HOOK_URL não configurado"
+            echo "Configure o secret RENDER_DEPLOY_HOOK_URL no GitHub"
+            exit 0
+          fi
+          
+          echo "🚀 Disparando deploy no Render..."
+          curl -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "✅ Deploy iniciado com sucesso!"
+      
+      - name: 💬 Deploy Status
+        run: |
+          echo "=================================="
+          echo "🎉 Deploy em progresso!"
+          echo "Acesse: https://dashboard.render.com"
+          echo "=================================="
+
+  # ============================================================
+  # NOTIFICAÇÃO DE SUCESSO
+  # ============================================================
+  notify:
+    name: 📢 Notify Success
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: success()
+    
+    steps:
+      - name: ✅ Success Notification
+        run: |
+          echo "=================================="
+          echo "✅ CI/CD CONCLUÍDO COM SUCESSO!"
+          echo "=================================="
+          echo "📦 Commit: ${{ github.sha }}"
+          echo "👤 Autor: ${{ github.actor }}"
+          echo "🌿 Branch: ${{ github.ref }}"
+          echo "=================================="
