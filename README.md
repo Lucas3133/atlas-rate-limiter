@@ -71,14 +71,18 @@ node tests/load/loadTest.js
 - FIX-001: Refill Rate seguro (1 ficha/s)
 - FIX-002: Trust Proxy configurável
 - FIX-003: Testes com porta dinâmica
-- SEC-003: Proteção de arquivos estáticos
+- **BUG-001**: Endpoint /metrics protegido com rate limit
+- **BUG-002**: Rota /api/no-limit restrita a desenvolvimento
+- **BUG-003**: Redis reconnection melhorado (60 tentativas, 10 min)
+- **BUG-004**: Proteção de arquivos estáticos (/public)
 - Dockerfile com usuário não-root
 - GitHub Actions CI/CD
 
-⏳ **Roadmap:**
-- ARCH-001: Clock drift correction (Redis TIME)
-- PERF-001: Script caching (EVALSHA)
-- FEAT-001: Métricas Prometheus
+✅ **Roadmap Concluído:**
+- ~~ARCH-001: Clock drift correction (Redis TIME)~~ ✓
+- ~~PERF-001: Script caching (EVALSHA)~~ ✓
+
+📄 **Relatório de Correções**: Ver [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md)
 
 ## 📊 Configuração
 
