@@ -29,16 +29,20 @@ function createRedisClient() {
             connectTimeout: config.redis.timeoutMs,
             commandTimeout: config.redis.timeoutMs,
 
-            // Retry strategy: desiste depois de 3 tentativas
+            // BUG-003 FIX: Retry strategy melhorado
+            // Antes: desistia após 3 tentativas (6s)
+            // Agora: tenta por até 60x com backoff até 10s
+            // Cenário: Se Redis cair por 1-2min, consegue reconectar automaticamente
             retryStrategy: (times) => {
-                if (times > 3) {
+                if (times > 60) {
                     logger.error({
                         event_type: 'redis_connection_failed',
-                        message: 'Redis desistindo de reconectar após 3 tentativas'
+                        message: 'Redis desistindo de reconectar após 60 tentativas (~10 minutos)'
                     });
                     return null; // Para de tentar
                 }
-                return Math.min(times * 100, 2000); // Backoff exponencial (max 2s)
+                // Backoff exponencial com limite de 10s
+                return Math.min(times * 1000, 10000);
             },
 
             // ============================================================
