@@ -1,8 +1,10 @@
 # 🛡️ Atlas Rate Limiter (Shield)
 
-[![CI Status](https://github.com/seu-usuario/atlas-rate-limiter/workflows/CI/badge.svg)](https://github.com/seu-usuario/atlas-rate-limiter/actions)
-[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![CI Status](https://github.com/Lucas3133/atlas-rate-limiter/workflows/CI%20-%20Atlas%20Rate%20Limiter/badge.svg)](https://github.com/Lucas3133/atlas-rate-limiter/actions)
+[![Deploy Status](https://img.shields.io/badge/render-deployed-success?logo=render)](https://atlas-rate-limiter.onrender.com)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen?logo=node.js)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Redis](https://img.shields.io/badge/redis-upstash-red?logo=redis)](https://upstash.com)
 
 > Rate limiter distribuído de alta performance usando Redis + Token Bucket Algorithm
 
