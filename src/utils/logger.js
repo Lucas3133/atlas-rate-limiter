@@ -46,6 +46,16 @@ const logger = {
     info: (data) => log('info', data),
 
     /**
+     * Log de debug (desenvolvimento)
+     */
+    debug: (data) => {
+        // Só loga em desenvolvimento para não poluir produção
+        if (config.env === 'development') {
+            log('debug', data);
+        }
+    },
+
+    /**
      * Log de aviso
      */
     warn: (data) => log('warn', data),
