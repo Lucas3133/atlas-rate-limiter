@@ -3,7 +3,8 @@
 // ================================================================
 // FEAT-001: Metrics for Grafana/Prometheus
 // METRIC-ADV-001: Decoupled System Health vs Protection Rate
-// SEC-ADV-001: Malicious client detection
+// SEC-ADV-001: Smart malicious client detection
+// SEC-ADV-002: Temporary ban for malicious clients
 // ================================================================
 
 class PrometheusMetrics {
@@ -25,19 +26,27 @@ class PrometheusMetrics {
         // GAUGES (values that can go up/down)
         // ============================================================
         this.activeClients = new Set();
-        this.maliciousClients = new Set();  // SEC-ADV-001: Track malicious IPs
+
+        // SEC-ADV-002: Banned clients with expiration time
+        // Format: { clientId: banExpiresAt (timestamp) }
+        this.bannedClients = new Map();
 
         // ============================================================
         // HISTOGRAMS (records last values)
         // ============================================================
         this.responseTimesMs = [];
-        this.maxHistorySize = 1000; // Keep last 1000 measurements
+        this.maxHistorySize = 1000;
 
-        // SEC-ADV-001: Track violation counts per client (in-memory cache)
+        // SEC-ADV-001: Track violation counts per client
         // Format: { clientId: { count: number, firstViolation: timestamp } }
         this.violationTracker = new Map();
-        this.MALICIOUS_THRESHOLD = 10;  // Blocks in 60s = malicious
-        this.VIOLATION_WINDOW_MS = 60000; // 60 seconds
+
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
+        this.MALICIOUS_THRESHOLD = 10;      // Blocks in window = malicious
+        this.VIOLATION_WINDOW_MS = 60000;   // 60 seconds window
+        this.BAN_DURATION_MS = 600000;      // SEC-ADV-002: 10 minutes ban
     }
 
     /**
@@ -58,9 +67,6 @@ class PrometheusMetrics {
         if (isMalicious) {
             this.blockedMalicious++;
             this.threatsNeutralized++;
-            if (clientId) {
-                this.maliciousClients.add(clientId);
-            }
         } else {
             this.blockedStandard++;
         }
@@ -68,6 +74,7 @@ class PrometheusMetrics {
 
     /**
      * SEC-ADV-001: Track client violations and detect malicious behavior
+     * SEC-ADV-002: Automatically ban malicious clients
      * @param {string} clientId - Client identifier
      * @returns {boolean} true if client is malicious
      */
@@ -82,7 +89,8 @@ class PrometheusMetrics {
 
                 // Check if threshold exceeded
                 if (existing.count >= this.MALICIOUS_THRESHOLD) {
-                    this.maliciousClients.add(clientId);
+                    // SEC-ADV-002: Ban the client!
+                    this.banClient(clientId);
                     return true;  // Malicious
                 }
             } else {
@@ -104,12 +112,69 @@ class PrometheusMetrics {
     }
 
     /**
-     * Check if client is flagged as malicious
+     * SEC-ADV-002: Ban a client for a duration
+     * @param {string} clientId 
+     * @param {number} durationMs - Ban duration (default: 10 minutes)
+     */
+    banClient(clientId, durationMs = this.BAN_DURATION_MS) {
+        const banExpiresAt = Date.now() + durationMs;
+        this.bannedClients.set(clientId, banExpiresAt);
+
+        console.log(
+            `\x1b[45m\x1b[37m\x1b[1m 🚨 CLIENT BANNED \x1b[0m ` +
+            `\x1b[35m${clientId}\x1b[0m ` +
+            `for \x1b[33m${Math.round(durationMs / 60000)} minutes\x1b[0m`
+        );
+    }
+
+    /**
+     * SEC-ADV-002: Check if client is currently banned
+     * @param {string} clientId 
+     * @returns {boolean} true if banned and ban hasn't expired
+     */
+    isClientBanned(clientId) {
+        const banExpiresAt = this.bannedClients.get(clientId);
+
+        if (!banExpiresAt) {
+            return false; // Not banned
+        }
+
+        const now = Date.now();
+
+        if (now >= banExpiresAt) {
+            // Ban expired - remove and allow
+            this.bannedClients.delete(clientId);
+            this.violationTracker.delete(clientId); // Reset violations too
+            console.log(
+                `\x1b[42m\x1b[37m\x1b[1m ✅ BAN EXPIRED \x1b[0m ` +
+                `\x1b[32m${clientId}\x1b[0m is now unbanned`
+            );
+            return false;
+        }
+
+        return true; // Still banned
+    }
+
+    /**
+     * SEC-ADV-002: Get remaining ban time in seconds
+     * @param {string} clientId 
+     * @returns {number} seconds remaining, or 0 if not banned
+     */
+    getBanTimeRemaining(clientId) {
+        const banExpiresAt = this.bannedClients.get(clientId);
+        if (!banExpiresAt) return 0;
+
+        const remaining = Math.max(0, banExpiresAt - Date.now());
+        return Math.ceil(remaining / 1000);
+    }
+
+    /**
+     * Check if client is flagged as malicious (legacy - for backwards compat)
      * @param {string} clientId 
      * @returns {boolean}
      */
     isMaliciousClient(clientId) {
-        return this.maliciousClients.has(clientId);
+        return this.isClientBanned(clientId);
     }
 
     /**
@@ -131,8 +196,6 @@ class PrometheusMetrics {
      */
     recordResponseTime(timeMs) {
         this.responseTimesMs.push(timeMs);
-
-        // Keep only last N measurements
         if (this.responseTimesMs.length > this.maxHistorySize) {
             this.responseTimesMs.shift();
         }
@@ -157,8 +220,6 @@ class PrometheusMetrics {
 
     /**
      * METRIC-ADV-001: Calculate System Health Score
-     * Indicates infrastructure reliability (should be 100% ideally)
-     * Formula: 100 - ((redis_errors + fail_open_events) / total_requests * 100)
      */
     getSystemHealthScore() {
         const totalRequests = this.requestsAllowed + this.requestsBlocked;
@@ -171,7 +232,6 @@ class PrometheusMetrics {
 
     /**
      * METRIC-ADV-001: Calculate Protection Rate
-     * Percentage of traffic being filtered/blocked by rate limiter
      */
     getProtectionRate() {
         const totalRequests = this.requestsAllowed + this.requestsBlocked;
@@ -180,18 +240,17 @@ class PrometheusMetrics {
     }
 
     /**
-     * UX-001: Get threat level based on protection rate and malicious activity
-     * @returns {'LOW'|'MEDIUM'|'HIGH'|'CRITICAL'}
+     * UX-001: Get threat level based on protection rate and banned clients
      */
     getThreatLevel() {
         const protectionRate = this.getProtectionRate();
-        const maliciousCount = this.maliciousClients.size;
+        const bannedCount = this.bannedClients.size;
 
-        if (maliciousCount >= 5 || protectionRate >= 50) {
+        if (bannedCount >= 5 || protectionRate >= 50) {
             return 'CRITICAL';
-        } else if (maliciousCount >= 2 || protectionRate >= 30) {
+        } else if (bannedCount >= 2 || protectionRate >= 30) {
             return 'HIGH';
-        } else if (maliciousCount >= 1 || protectionRate >= 10) {
+        } else if (bannedCount >= 1 || protectionRate >= 10) {
             return 'MEDIUM';
         }
         return 'LOW';
@@ -213,11 +272,11 @@ class PrometheusMetrics {
             systemHealthScore: this.getSystemHealthScore().toFixed(1),
             protectionRate: this.getProtectionRate().toFixed(1),
 
-            // SEC-ADV-001: Security metrics
+            // SEC-ADV-001 & SEC-ADV-002: Security metrics
             blockedStandard: this.blockedStandard,
             blockedMalicious: this.blockedMalicious,
             threatsNeutralized: this.threatsNeutralized,
-            maliciousClients: this.maliciousClients.size,
+            bannedClients: this.bannedClients.size,
 
             // Infrastructure
             redisErrors: this.redisErrors,
@@ -225,7 +284,10 @@ class PrometheusMetrics {
             activeClients: this.activeClients.size,
 
             // UX-001
-            threatLevel: this.getThreatLevel()
+            threatLevel: this.getThreatLevel(),
+
+            // SEC-ADV-002: Ban info
+            banDurationMinutes: Math.round(this.BAN_DURATION_MS / 60000)
         };
     }
 
@@ -248,13 +310,12 @@ class PrometheusMetrics {
         lines.push(`atlas_requests_blocked_total ${this.requestsBlocked}`);
         lines.push('');
 
-        // SEC-ADV-001: Separate blocked counters
         lines.push('# HELP atlas_blocked_standard Standard rate limit blocks');
         lines.push('# TYPE atlas_blocked_standard counter');
         lines.push(`atlas_blocked_standard ${this.blockedStandard}`);
         lines.push('');
 
-        lines.push('# HELP atlas_blocked_malicious Blocks from malicious clients');
+        lines.push('# HELP atlas_blocked_malicious Blocks from banned clients');
         lines.push('# TYPE atlas_blocked_malicious counter');
         lines.push(`atlas_blocked_malicious ${this.blockedMalicious}`);
         lines.push('');
@@ -269,7 +330,7 @@ class PrometheusMetrics {
         lines.push(`atlas_redis_errors_total ${this.redisErrors}`);
         lines.push('');
 
-        lines.push('# HELP atlas_fail_open_events_total Total fail-open events (allowed due to error)');
+        lines.push('# HELP atlas_fail_open_events_total Total fail-open events');
         lines.push('# TYPE atlas_fail_open_events_total counter');
         lines.push(`atlas_fail_open_events_total ${this.failOpenEvents}`);
         lines.push('');
@@ -282,27 +343,27 @@ class PrometheusMetrics {
         lines.push(`atlas_active_clients ${this.activeClients.size}`);
         lines.push('');
 
-        // SEC-ADV-001: Malicious clients gauge
-        lines.push('# HELP atlas_malicious_clients Number of clients flagged as malicious');
-        lines.push('# TYPE atlas_malicious_clients gauge');
-        lines.push(`atlas_malicious_clients ${this.maliciousClients.size}`);
+        // SEC-ADV-002: Banned clients gauge
+        lines.push('# HELP atlas_banned_clients Number of currently banned clients');
+        lines.push('# TYPE atlas_banned_clients gauge');
+        lines.push(`atlas_banned_clients ${this.bannedClients.size}`);
         lines.push('');
 
         // METRIC-ADV-001: System Health Score
         const healthScore = this.getSystemHealthScore();
-        lines.push('# HELP atlas_system_health_score Infrastructure reliability percentage (100 = perfect)');
+        lines.push('# HELP atlas_system_health_score Infrastructure reliability percentage');
         lines.push('# TYPE atlas_system_health_score gauge');
         lines.push(`atlas_system_health_score ${healthScore.toFixed(2)}`);
         lines.push('');
 
         // METRIC-ADV-001: Protection Rate
         const protectionRate = this.getProtectionRate();
-        lines.push('# HELP atlas_protection_rate Percentage of traffic filtered by rate limiter');
+        lines.push('# HELP atlas_protection_rate Percentage of traffic filtered');
         lines.push('# TYPE atlas_protection_rate gauge');
         lines.push(`atlas_protection_rate ${protectionRate.toFixed(2)}`);
         lines.push('');
 
-        // Legacy: Block rate (for backwards compatibility)
+        // Legacy block rate
         const totalRequests = this.requestsAllowed + this.requestsBlocked;
         const blockRate = totalRequests > 0
             ? ((this.requestsBlocked / totalRequests) * 100).toFixed(2)
@@ -314,7 +375,7 @@ class PrometheusMetrics {
         lines.push('');
 
         // ============================================================
-        // HISTOGRAMS - Response Time
+        // HISTOGRAMS
         // ============================================================
         if (this.responseTimesMs.length > 0) {
             const p50 = this.percentile(this.responseTimesMs, 50);
@@ -335,16 +396,26 @@ class PrometheusMetrics {
         // ============================================================
         lines.push('# HELP atlas_info Atlas Rate Limiter information');
         lines.push('# TYPE atlas_info gauge');
-        lines.push(`atlas_info{version="1.1.0",arch="distributed"} 1`);
+        lines.push(`atlas_info{version="1.1.1",arch="distributed"} 1`);
 
         return lines.join('\n');
     }
 
     /**
-     * Cleanup expired violation trackers (call periodically)
+     * Cleanup expired bans and violations (call periodically)
      */
-    cleanupViolationTracker() {
+    cleanup() {
         const now = Date.now();
+
+        // Cleanup expired bans
+        for (const [clientId, banExpiresAt] of this.bannedClients.entries()) {
+            if (now >= banExpiresAt) {
+                this.bannedClients.delete(clientId);
+                this.violationTracker.delete(clientId);
+            }
+        }
+
+        // Cleanup old violations
         for (const [clientId, data] of this.violationTracker.entries()) {
             if (now - data.firstViolation > this.VIOLATION_WINDOW_MS * 2) {
                 this.violationTracker.delete(clientId);
@@ -364,7 +435,7 @@ class PrometheusMetrics {
         this.blockedMalicious = 0;
         this.threatsNeutralized = 0;
         this.activeClients.clear();
-        this.maliciousClients.clear();
+        this.bannedClients.clear();
         this.responseTimesMs = [];
         this.violationTracker.clear();
     }
@@ -373,7 +444,7 @@ class PrometheusMetrics {
 // Global singleton
 const metrics = new PrometheusMetrics();
 
-// Cleanup old violations every 2 minutes
-setInterval(() => metrics.cleanupViolationTracker(), 120000);
+// Cleanup every 2 minutes
+setInterval(() => metrics.cleanup(), 120000);
 
 module.exports = metrics;

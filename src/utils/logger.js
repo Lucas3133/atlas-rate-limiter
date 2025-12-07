@@ -2,7 +2,7 @@
 // ATLAS RATE LIMITER - STRUCTURED LOGGER
 // ================================================================
 // OPS-001: Audit logs in structured JSON
-// ENHANCED: Visual colored logs with malicious detection
+// ENHANCED: Visual colored logs with ban detection
 // ================================================================
 
 const config = require('../config');
@@ -19,13 +19,12 @@ const colors = {
     bgRed: '\x1b[41m',
     bgGreen: '\x1b[42m',
     bgMagenta: '\x1b[45m',
+    bgYellow: '\x1b[43m',
     bold: '\x1b[1m'
 };
 
 /**
  * Formats log in structured JSON
- * @param {string} level - Log level (info, warn, error)
- * @param {object} data - Log data
  */
 function log(level, data) {
     const logEntry = {
@@ -35,61 +34,47 @@ function log(level, data) {
         ...data
     };
 
-    // In production: log pure JSON (easy to parse)
     if (config.env === 'production') {
         console.log(JSON.stringify(logEntry));
     }
 }
 
 const logger = {
-    /**
-     * Informational log
-     */
     info: (data) => log('info', data),
 
-    /**
-     * Debug log (development)
-     */
     debug: (data) => {
-        // Only logs in development to avoid polluting production
         if (config.env === 'development') {
             log('debug', data);
         }
     },
 
-    /**
-     * Warning log
-     */
     warn: (data) => log('warn', data),
 
-    /**
-     * Error log
-     */
     error: (data) => log('error', data),
 
     /**
-     * Block audit log with malicious detection 🚫
+     * Block audit log with ban detection 🚫
      * @param {string} clientId - Client identifier
      * @param {number} remaining - Remaining tokens
-     * @param {boolean} isMalicious - SEC-ADV-001: Whether client is flagged as malicious
+     * @param {boolean} isBanned - SEC-ADV-002: Whether client is banned
      */
-    auditBlock: (clientId, remaining, isMalicious = false) => {
-        // Structured log (for production)
+    auditBlock: (clientId, remaining, isBanned = false) => {
+        // Structured log
         log('warn', {
-            event_type: isMalicious ? 'malicious_blocked' : 'rate_limit_blocked',
+            event_type: isBanned ? 'banned_request_blocked' : 'rate_limit_blocked',
             client_id: clientId,
             action: 'DENY',
             remaining_tokens: remaining,
-            is_malicious: isMalicious
+            is_banned: isBanned
         });
 
-        // VISUAL colored log (for development)
-        if (isMalicious) {
-            // SEC-ADV-001: Special visual for malicious clients
+        // Visual colored log
+        if (isBanned) {
+            // SEC-ADV-002: Special visual for BANNED clients
             console.log(
-                `${colors.bgMagenta}${colors.white}${colors.bold} ⚠️ THREAT BLOCKED ${colors.reset} ` +
+                `${colors.bgMagenta}${colors.white}${colors.bold} ⛔ BANNED \x1b[0m ` +
                 `${colors.magenta}${clientId}${colors.reset} ` +
-                `(${colors.red}MALICIOUS${colors.reset})`
+                `${colors.red}(TEMP BAN ACTIVE)${colors.reset}`
             );
         } else {
             console.log(
@@ -104,7 +89,6 @@ const logger = {
      * Allow audit log ✅
      */
     auditAllow: (clientId, remaining) => {
-        // Structured log (for production)
         if (config.env === 'production') {
             log('info', {
                 event_type: 'rate_limit_allowed',
@@ -114,7 +98,6 @@ const logger = {
             });
         }
 
-        // VISUAL colored log (development)
         if (config.env === 'development') {
             console.log(
                 `${colors.green}✅ ALLOWED${colors.reset} ` +
@@ -122,24 +105,6 @@ const logger = {
                 `(${colors.green}${remaining} tokens${colors.reset})`
             );
         }
-    },
-
-    /**
-     * SEC-ADV-001: Log when a client is flagged as malicious
-     */
-    auditMaliciousDetected: (clientId) => {
-        log('warn', {
-            event_type: 'malicious_client_detected',
-            client_id: clientId,
-            action: 'FLAGGED',
-            message: 'Client exceeded violation threshold'
-        });
-
-        console.log(
-            `${colors.bgMagenta}${colors.white}${colors.bold} 🚨 THREAT DETECTED ${colors.reset} ` +
-            `${colors.magenta}${clientId}${colors.reset} ` +
-            `flagged as ${colors.red}MALICIOUS${colors.reset}`
-        );
     }
 };
 

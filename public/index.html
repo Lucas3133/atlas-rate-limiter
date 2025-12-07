@@ -954,8 +954,8 @@
                     <div class="counter-label">⚠️ Threats Neutralized</div>
                 </div>
                 <div class="counter health">
-                    <div class="counter-value" id="maliciousClients">0</div>
-                    <div class="counter-label">🚨 Malicious Clients</div>
+                    <div class="counter-value" id="bannedClients">0</div>
+                    <div class="counter-label">⛔ Banned Clients</div>
                 </div>
             </div>
         </section>
@@ -1058,7 +1058,7 @@
                 const blockedMatch = text.match(/atlas_requests_blocked_total\s+(\d+)/);
                 const healthMatch = text.match(/atlas_system_health_score\s+([\d.]+)/);
                 const protectionMatch = text.match(/atlas_protection_rate\s+([\d.]+)/);
-                const maliciousMatch = text.match(/atlas_malicious_clients\s+(\d+)/);
+                const bannedMatch = text.match(/atlas_banned_clients\s+(\d+)/);
                 const threatsMatch = text.match(/atlas_threats_neutralized\s+(\d+)/);
                 const failOpenMatch = text.match(/atlas_fail_open_events_total\s+(\d+)/);
                 const p95Match = text.match(/atlas_response_time_ms{quantile="0.95"}\s+([\d.]+)/);
@@ -1067,7 +1067,7 @@
                 if (allowedMatch) updateCounter('allowedCount', parseInt(allowedMatch[1]));
                 if (blockedMatch) updateCounter('blockedCount', parseInt(blockedMatch[1]));
                 if (threatsMatch) updateCounter('threatsCount', parseInt(threatsMatch[1]));
-                if (maliciousMatch) updateCounter('maliciousClients', parseInt(maliciousMatch[1]));
+                if (bannedMatch) updateCounter('bannedClients', parseInt(bannedMatch[1]));
 
                 // METRIC-ADV-001: Update new metrics
                 if (healthMatch) {
@@ -1079,7 +1079,7 @@
                 if (protectionMatch) {
                     const protection = parseFloat(protectionMatch[1]);
                     document.getElementById('protectionRate').textContent = protection.toFixed(1) + '%';
-                    updateThreatLevel(protection, maliciousMatch ? parseInt(maliciousMatch[1]) : 0);
+                    updateThreatLevel(protection, bannedMatch ? parseInt(bannedMatch[1]) : 0);
                 }
 
                 // UX-001: Show fail-open warning
@@ -1128,17 +1128,17 @@
         }
 
         // UX-001: Update threat level badge
-        function updateThreatLevel(protectionRate, maliciousClients) {
+        function updateThreatLevel(protectionRate, bannedClients) {
             const badge = document.getElementById('threatBadge');
             let level, className;
 
-            if (maliciousClients >= 5 || protectionRate >= 50) {
+            if (bannedClients >= 5 || protectionRate >= 50) {
                 level = 'CRITICAL';
                 className = 'critical';
-            } else if (maliciousClients >= 2 || protectionRate >= 30) {
+            } else if (bannedClients >= 2 || protectionRate >= 30) {
                 level = 'HIGH';
                 className = 'high';
-            } else if (maliciousClients >= 1 || protectionRate >= 10) {
+            } else if (bannedClients >= 1 || protectionRate >= 10) {
                 level = 'MEDIUM';
                 className = 'medium';
             } else {

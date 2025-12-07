@@ -3,6 +3,7 @@
 // ================================================================
 // Integration of all components
 // SEC-ADV-001: Smart malicious client detection
+// SEC-ADV-002: Immediate blocking for banned clients
 // ================================================================
 
 const fs = require('fs');
@@ -34,8 +35,6 @@ function rateLimiter(options = {}) {
     // ============================================================
     // FIX-003: STRICT INPUT VALIDATION
     // ============================================================
-    // Prevents crashes in Lua script with invalid values
-
     if (typeof capacity !== 'number' || capacity <= 0 || !Number.isFinite(capacity)) {
         throw new Error(`[Atlas Shield] Invalid capacity: ${capacity}. Must be positive number.`);
     }
@@ -48,33 +47,59 @@ function rateLimiter(options = {}) {
         throw new Error(`[Atlas Shield] Invalid cost: ${cost}. Must be positive number.`);
     }
 
-    // Additional validation: capacity must be >= cost
     if (capacity < cost) {
         throw new Error(`[Atlas Shield] Capacity (${capacity}) must be >= cost (${cost})`);
     }
 
     return async (req, res, next) => {
         const startTime = Date.now();
+
         try {
             // ============================================================
             // 1. IDENTIFY CLIENT
             // ============================================================
             const clientId = identifyClient(req);
-            const redisKey = `${config.rateLimit.keyPrefix}${clientId}`;
             metrics.trackClient(clientId);
 
             // ============================================================
-            // SEC-ADV-001: Check if client is already flagged as malicious
+            // SEC-ADV-002: CHECK IF CLIENT IS BANNED (IMMEDIATE BLOCK!)
             // ============================================================
-            const isKnownMalicious = metrics.isMaliciousClient(clientId);
+            // This happens BEFORE checking Redis or tokens!
+            // Banned clients are blocked instantly - no token refill allowed
+
+            if (metrics.isClientBanned(clientId)) {
+                const banTimeRemaining = metrics.getBanTimeRemaining(clientId);
+
+                // Log the banned request
+                logger.auditBlock(clientId, 0, true);
+                metrics.incrementBlocked(clientId, true);
+                metrics.recordResponseTime(Date.now() - startTime);
+
+                // Set headers
+                res.setHeader('X-RateLimit-Limit', capacity);
+                res.setHeader('X-RateLimit-Remaining', 0);
+                res.setHeader('Retry-After', banTimeRemaining);
+                res.setHeader('X-Ban-Remaining', banTimeRemaining);
+                res.setHeader('X-Threat-Level', 'BANNED');
+
+                return res.status(429).json({
+                    error: 'Too Many Requests',
+                    message: 'Your IP has been temporarily banned due to excessive requests.',
+                    banned: true,
+                    ban_remaining_seconds: banTimeRemaining,
+                    retry_after_seconds: banTimeRemaining,
+                    limit: capacity,
+                    remaining: 0
+                });
+            }
 
             // ============================================================
             // 2. GET REDIS CLIENT
             // ============================================================
+            const redisKey = `${config.rateLimit.keyPrefix}${clientId}`;
             const redis = getRedisClient();
 
             // SEC-001: FAIL-OPEN
-            // If Redis unavailable, allow request
             if (!redis) {
                 logger.warn({
                     event_type: 'rate_limit_fail_open',
@@ -98,7 +123,7 @@ function rateLimiter(options = {}) {
             }
 
             // ============================================================
-            // 3. EXECUTE LUA SCRIPT (Atomic Token Bucket via EVALSHA)
+            // 3. EXECUTE LUA SCRIPT (Atomic Token Bucket)
             // ============================================================
             const result = await redis.tokenBucket(
                 redisKey,
@@ -110,7 +135,7 @@ function rateLimiter(options = {}) {
             const [allowed, remaining, resetTimestamp] = result;
 
             // ============================================================
-            // 4. ADD RFC-COMPLIANT HEADERS (API-001)
+            // 4. ADD RFC-COMPLIANT HEADERS
             // ============================================================
             res.setHeader('X-RateLimit-Limit', capacity);
             res.setHeader('X-RateLimit-Remaining', remaining);
@@ -128,36 +153,44 @@ function rateLimiter(options = {}) {
             } else {
                 // ❌ BLOCKED - 429 Too Many Requests
 
-                // SEC-ADV-001: Track violation and detect malicious behavior
-                const isMalicious = isKnownMalicious || metrics.trackViolation(clientId);
+                // SEC-ADV-001: Track violation and check if should be banned
+                const shouldBan = metrics.trackViolation(clientId);
+                const isBanned = shouldBan || metrics.isClientBanned(clientId);
 
                 // Log with malicious flag
-                logger.auditBlock(clientId, remaining, isMalicious);
+                logger.auditBlock(clientId, remaining, isBanned);
 
-                // Update metrics with malicious distinction
-                metrics.incrementBlocked(clientId, isMalicious);
+                // Update metrics
+                metrics.incrementBlocked(clientId, isBanned);
                 metrics.recordResponseTime(Date.now() - startTime);
 
                 // Calculate retry after
                 const now = Math.floor(Date.now() / 1000);
-                const retryAfter = Math.max(0, resetTimestamp - now);
+                let retryAfter = Math.max(0, resetTimestamp - now);
+
+                // SEC-ADV-002: If just got banned, use ban time instead
+                if (shouldBan) {
+                    retryAfter = metrics.getBanTimeRemaining(clientId);
+                    res.setHeader('X-Ban-Remaining', retryAfter);
+                }
+
                 res.setHeader('Retry-After', retryAfter);
 
-                // SEC-ADV-001: Add threat indicator header for monitoring
-                if (isMalicious) {
-                    res.setHeader('X-Threat-Level', 'MALICIOUS');
+                if (isBanned) {
+                    res.setHeader('X-Threat-Level', 'BANNED');
                 }
 
                 return res.status(429).json({
                     error: 'Too Many Requests',
-                    message: isMalicious
-                        ? 'Rate limit exceeded. Your activity has been flagged as suspicious.'
+                    message: isBanned
+                        ? 'Your IP has been temporarily banned due to excessive requests.'
                         : 'Rate limit exceeded. Please slow down.',
+                    banned: isBanned,
                     retry_after_seconds: retryAfter,
                     limit: capacity,
                     remaining: 0,
                     reset: resetTimestamp,
-                    threat_detected: isMalicious
+                    threat_detected: isBanned
                 });
             }
 
@@ -173,7 +206,6 @@ function rateLimiter(options = {}) {
                 action: 'ALLOW (fail-open)'
             });
 
-            // Allow request (availability > control)
             return next();
         }
     };
