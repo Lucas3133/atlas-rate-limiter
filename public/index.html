@@ -16,6 +16,7 @@
             --success: #10b981;
             --danger: #ef4444;
             --warning: #f59e0b;
+            --info: #06b6d4;
             --dark: #0f172a;
             --darker: #020617;
             --glass: rgba(255, 255, 255, 0.05);
@@ -118,7 +119,6 @@
             }
         }
 
-        /* Container */
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -182,7 +182,15 @@
             font-weight: 400;
         }
 
-        /* Status Badge */
+        /* Status Badges Row */
+        .status-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -192,17 +200,49 @@
             border: 1px solid var(--glass-border);
             padding: 12px 24px;
             border-radius: 50px;
-            margin: 25px 0;
             animation: pulse 2s ease-in-out infinite;
         }
 
         .status-dot {
             width: 12px;
             height: 12px;
-            background: var(--success);
             border-radius: 50%;
-            box-shadow: 0 0 20px var(--success);
             animation: blink 1.5s ease-in-out infinite;
+        }
+
+        .status-dot.healthy {
+            background: var(--success);
+            box-shadow: 0 0 20px var(--success);
+        }
+
+        .status-dot.warning {
+            background: var(--warning);
+            box-shadow: 0 0 20px var(--warning);
+        }
+
+        .status-dot.danger {
+            background: var(--danger);
+            box-shadow: 0 0 20px var(--danger);
+        }
+
+        .status-dot.critical {
+            background: #dc2626;
+            box-shadow: 0 0 20px #dc2626;
+            animation: criticalPulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes criticalPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
         }
 
         @keyframes blink {
@@ -229,7 +269,42 @@
             }
         }
 
-        /* Stats Grid */
+        /* Threat Level Badge */
+        .threat-badge {
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .threat-badge.low {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .threat-badge.medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .threat-badge.high {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .threat-badge.critical {
+            background: rgba(220, 38, 38, 0.3);
+            color: #fca5a5;
+            border: 1px solid #dc2626;
+            animation: criticalPulse 1s ease-in-out infinite;
+        }
+
+        /* Stats Grid - METRIC-ADV-001 */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -326,6 +401,12 @@
             -webkit-background-clip: text;
         }
 
+        .stat-value.info {
+            background: linear-gradient(135deg, #fff, var(--info));
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
         .stat-label {
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.85rem;
@@ -334,7 +415,7 @@
             letter-spacing: 1px;
         }
 
-        /* Live Counter Section */
+        /* Live Counters Section */
         .live-section {
             background: var(--glass);
             backdrop-filter: blur(20px);
@@ -350,6 +431,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .live-title {
@@ -381,11 +464,17 @@
 
         .counters {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 800px) {
+            .counters {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
             .counters {
                 grid-template-columns: 1fr;
             }
@@ -396,10 +485,16 @@
             border-radius: 16px;
             padding: 25px;
             text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .counter:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: scale(1.02);
         }
 
         .counter-value {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
             font-variant-numeric: tabular-nums;
             transition: all 0.3s ease;
@@ -411,7 +506,7 @@
 
         .counter-label {
             color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-top: 8px;
         }
 
@@ -423,8 +518,47 @@
             color: var(--danger);
         }
 
-        .counter.rate .counter-value {
+        .counter.threats .counter-value {
+            color: #f472b6;
+        }
+
+        .counter.health .counter-value {
+            color: var(--info);
+        }
+
+        /* Fail-Open Warning */
+        .fail-open-warning {
+            display: none;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .fail-open-warning.visible {
+            display: flex;
+        }
+
+        .fail-open-warning-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+        }
+
+        .fail-open-warning-text {
+            flex: 1;
+        }
+
+        .fail-open-warning-title {
             color: var(--warning);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .fail-open-warning-desc {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
         }
 
         /* Endpoints Section */
@@ -568,7 +702,7 @@
             border-color: var(--primary);
         }
 
-        /* Response Modal */
+        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -719,7 +853,6 @@
             margin-left: 8px;
         }
 
-        /* Loading Spinner */
         .spinner {
             width: 20px;
             height: 20px;
@@ -749,23 +882,30 @@
             <div class="logo">🛡️</div>
             <h1>Atlas Shield</h1>
             <p class="subtitle">Distributed Rate Limiter • Token Bucket Algorithm</p>
-            <div class="status-badge">
-                <span class="status-dot"></span>
-                <span id="systemStatus">System Online</span>
+
+            <!-- UX-001: Status Badges Row -->
+            <div class="status-row">
+                <div class="status-badge">
+                    <span class="status-dot healthy" id="systemStatusDot"></span>
+                    <span id="systemStatus">System Online</span>
+                </div>
+                <div class="threat-badge low" id="threatBadge">
+                    🛡️ Threat Level: LOW
+                </div>
             </div>
         </header>
 
-        <!-- Stats Grid -->
+        <!-- METRIC-ADV-001: Stats Grid with separated metrics -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">🪙</div>
-                <div class="stat-value">100</div>
-                <div class="stat-label">Default Tokens</div>
+                <div class="stat-icon">💚</div>
+                <div class="stat-value success" id="systemHealth">100%</div>
+                <div class="stat-label">System Health</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">⚡</div>
-                <div class="stat-value success">1/s</div>
-                <div class="stat-label">Refill Rate</div>
+                <div class="stat-icon">🛡️</div>
+                <div class="stat-value info" id="protectionRate">0%</div>
+                <div class="stat-label">Protection Rate</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">🔗</div>
@@ -779,12 +919,22 @@
             </div>
         </div>
 
-        <!-- Live Counters -->
+        <!-- UX-001: Fail-Open Warning -->
+        <div class="fail-open-warning" id="failOpenWarning">
+            <span class="fail-open-warning-icon">⚠️</span>
+            <div class="fail-open-warning-text">
+                <div class="fail-open-warning-title">Fail-Open Mode Active</div>
+                <div class="fail-open-warning-desc">
+                    <span id="failOpenCount">0</span> requests were allowed without rate limiting due to Redis
+                    connection issues.
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Counters - SEC-ADV-001 -->
         <section class="live-section">
             <div class="live-header">
-                <div class="live-title">
-                    📊 Real-Time Metrics
-                </div>
+                <div class="live-title">📊 Real-Time Metrics</div>
                 <div class="live-indicator">
                     <span class="live-dot"></span>
                     LIVE
@@ -793,15 +943,19 @@
             <div class="counters">
                 <div class="counter allowed">
                     <div class="counter-value" id="allowedCount">0</div>
-                    <div class="counter-label">Allowed Requests</div>
+                    <div class="counter-label">✅ Allowed</div>
                 </div>
                 <div class="counter blocked">
                     <div class="counter-value" id="blockedCount">0</div>
-                    <div class="counter-label">Blocked Requests</div>
+                    <div class="counter-label">🚫 Blocked</div>
                 </div>
-                <div class="counter rate">
-                    <div class="counter-value" id="blockRate">0%</div>
-                    <div class="counter-label">Block Rate</div>
+                <div class="counter threats">
+                    <div class="counter-value" id="threatsCount">0</div>
+                    <div class="counter-label">⚠️ Threats Neutralized</div>
+                </div>
+                <div class="counter health">
+                    <div class="counter-value" id="maliciousClients">0</div>
+                    <div class="counter-label">🚨 Malicious Clients</div>
                 </div>
             </div>
         </section>
@@ -858,25 +1012,19 @@
 
         <!-- Action Buttons -->
         <div class="actions">
-            <button class="btn btn-primary" onclick="runQuickTest()">
-                ⚡ Quick Test
-            </button>
-            <button class="btn btn-danger" onclick="runStressTest()">
-                🔥 Stress Test (50 req)
-            </button>
-            <button class="btn btn-outline" onclick="refreshMetrics()">
-                🔄 Refresh Metrics
-            </button>
+            <button class="btn btn-primary" onclick="runQuickTest()">⚡ Quick Test</button>
+            <button class="btn btn-danger" onclick="runStressTest()">🔥 Stress Test (50 req)</button>
+            <button class="btn btn-outline" onclick="refreshMetrics()">🔄 Refresh Metrics</button>
         </div>
 
         <!-- Footer -->
         <footer class="footer">
             <p>
                 <strong>Atlas Rate Limiter</strong>
-                <span class="version-badge">v1.0.0-beta</span>
+                <span class="version-badge">v1.1.0</span>
             </p>
             <p style="margin-top: 8px;">
-                Token Bucket • Fail-Open • EVALSHA Caching • Prometheus Metrics
+                Token Bucket • Fail-Open • EVALSHA Caching • Prometheus Metrics • Threat Detection
             </p>
         </footer>
     </div>
@@ -893,21 +1041,13 @@
     </div>
 
     <script>
-        // State
-        let metrics = {
-            allowed: 0,
-            blocked: 0,
-            blockRate: 0
-        };
-
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             refreshMetrics();
-            // Auto-refresh every 5 seconds
             setInterval(refreshMetrics, 5000);
         });
 
-        // Fetch and display metrics
+        // METRIC-ADV-001 & SEC-ADV-001: Fetch and display advanced metrics
         async function refreshMetrics() {
             try {
                 const response = await fetch('/metrics');
@@ -916,14 +1056,44 @@
                 // Parse Prometheus format
                 const allowedMatch = text.match(/atlas_requests_allowed_total\s+(\d+)/);
                 const blockedMatch = text.match(/atlas_requests_blocked_total\s+(\d+)/);
-                const blockRateMatch = text.match(/atlas_block_rate_percent\s+([\d.]+)/);
+                const healthMatch = text.match(/atlas_system_health_score\s+([\d.]+)/);
+                const protectionMatch = text.match(/atlas_protection_rate\s+([\d.]+)/);
+                const maliciousMatch = text.match(/atlas_malicious_clients\s+(\d+)/);
+                const threatsMatch = text.match(/atlas_threats_neutralized\s+(\d+)/);
+                const failOpenMatch = text.match(/atlas_fail_open_events_total\s+(\d+)/);
                 const p95Match = text.match(/atlas_response_time_ms{quantile="0.95"}\s+([\d.]+)/);
 
+                // Update counters
                 if (allowedMatch) updateCounter('allowedCount', parseInt(allowedMatch[1]));
                 if (blockedMatch) updateCounter('blockedCount', parseInt(blockedMatch[1]));
-                if (blockRateMatch) {
-                    document.getElementById('blockRate').textContent = parseFloat(blockRateMatch[1]).toFixed(1) + '%';
+                if (threatsMatch) updateCounter('threatsCount', parseInt(threatsMatch[1]));
+                if (maliciousMatch) updateCounter('maliciousClients', parseInt(maliciousMatch[1]));
+
+                // METRIC-ADV-001: Update new metrics
+                if (healthMatch) {
+                    const health = parseFloat(healthMatch[1]);
+                    document.getElementById('systemHealth').textContent = health.toFixed(1) + '%';
+                    updateHealthIndicator(health);
                 }
+
+                if (protectionMatch) {
+                    const protection = parseFloat(protectionMatch[1]);
+                    document.getElementById('protectionRate').textContent = protection.toFixed(1) + '%';
+                    updateThreatLevel(protection, maliciousMatch ? parseInt(maliciousMatch[1]) : 0);
+                }
+
+                // UX-001: Show fail-open warning
+                if (failOpenMatch) {
+                    const failOpenCount = parseInt(failOpenMatch[1]);
+                    const warning = document.getElementById('failOpenWarning');
+                    if (failOpenCount > 0) {
+                        warning.classList.add('visible');
+                        document.getElementById('failOpenCount').textContent = failOpenCount;
+                    } else {
+                        warning.classList.remove('visible');
+                    }
+                }
+
                 if (p95Match) {
                     document.getElementById('latency').textContent = parseFloat(p95Match[1]).toFixed(0) + 'ms';
                 }
@@ -931,12 +1101,53 @@
                 // Check health
                 const healthRes = await fetch('/health');
                 const health = await healthRes.json();
-                document.getElementById('redisStatus').textContent = health.services?.redis === 'healthy' ? 'OK' : 'ERROR';
-                document.getElementById('systemStatus').textContent = health.status === 'ok' ? 'System Online' : 'Degraded';
+                const redisOk = health.services?.redis === 'healthy';
+                document.getElementById('redisStatus').textContent = redisOk ? 'OK' : 'ERROR';
+                document.getElementById('redisStatus').className = `stat-value ${redisOk ? 'success' : 'danger'}`;
 
             } catch (error) {
                 console.error('Error fetching metrics:', error);
             }
+        }
+
+        // UX-001: Update health indicator
+        function updateHealthIndicator(health) {
+            const dot = document.getElementById('systemStatusDot');
+            const status = document.getElementById('systemStatus');
+
+            if (health >= 99) {
+                dot.className = 'status-dot healthy';
+                status.textContent = 'System Online';
+            } else if (health >= 90) {
+                dot.className = 'status-dot warning';
+                status.textContent = 'System Degraded';
+            } else {
+                dot.className = 'status-dot danger';
+                status.textContent = 'System Issues';
+            }
+        }
+
+        // UX-001: Update threat level badge
+        function updateThreatLevel(protectionRate, maliciousClients) {
+            const badge = document.getElementById('threatBadge');
+            let level, className;
+
+            if (maliciousClients >= 5 || protectionRate >= 50) {
+                level = 'CRITICAL';
+                className = 'critical';
+            } else if (maliciousClients >= 2 || protectionRate >= 30) {
+                level = 'HIGH';
+                className = 'high';
+            } else if (maliciousClients >= 1 || protectionRate >= 10) {
+                level = 'MEDIUM';
+                className = 'medium';
+            } else {
+                level = 'LOW';
+                className = 'low';
+            }
+
+            badge.className = `threat-badge ${className}`;
+            badge.innerHTML = `🛡️ Threat Level: ${level}`;
         }
 
         // Animate counter update
@@ -972,10 +1183,15 @@
                 const statusClass = isSuccess ? 'success' : 'error';
                 const statusIcon = isSuccess ? '✅' : '🚫';
 
+                // SEC-ADV-001: Show threat indicator if present
+                const threatLevel = response.headers.get('X-Threat-Level');
+                const threatIndicator = threatLevel ? `<div style="color:#f472b6;margin-top:8px">⚠️ Threat Detected: ${threatLevel}</div>` : '';
+
                 const html = `
                     <div class="response-status ${statusClass}">
                         ${statusIcon} ${response.status} ${response.statusText}
                     </div>
+                    ${threatIndicator}
                     <div class="response-details">
                         <div class="detail-row">
                             <span class="detail-label">Endpoint</span>
@@ -992,10 +1208,6 @@
                         <div class="detail-row">
                             <span class="detail-label">Remaining</span>
                             <span class="detail-value">${response.headers.get('X-RateLimit-Remaining') || 'N/A'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Reset</span>
-                            <span class="detail-value">${response.headers.get('X-RateLimit-Reset') || 'N/A'}</span>
                         </div>
                     </div>
                     <details style="margin-top:15px">
@@ -1104,7 +1316,6 @@
             }
         }
 
-        // Close modal on ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });

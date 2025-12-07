@@ -2,6 +2,7 @@
 // ATLAS RATE LIMITER - EXPRESS MIDDLEWARE
 // ================================================================
 // Integration of all components
+// SEC-ADV-001: Smart malicious client detection
 // ================================================================
 
 const fs = require('fs');
@@ -9,7 +10,7 @@ const path = require('path');
 const { getRedisClient } = require('../core/redisClient');
 const { identifyClient } = require('../utils/clientIdentifier');
 const logger = require('../utils/logger');
-const metrics = require('../utils/metrics'); // FEAT-001
+const metrics = require('../utils/metrics');
 const config = require('../config');
 
 // PERF-001: Lua script loaded once (EVALSHA optimizes bandwidth)
@@ -53,14 +54,19 @@ function rateLimiter(options = {}) {
     }
 
     return async (req, res, next) => {
-        const startTime = Date.now(); // FEAT-001: Measure latency
+        const startTime = Date.now();
         try {
             // ============================================================
             // 1. IDENTIFY CLIENT
             // ============================================================
             const clientId = identifyClient(req);
             const redisKey = `${config.rateLimit.keyPrefix}${clientId}`;
-            metrics.trackClient(clientId); // FEAT-001
+            metrics.trackClient(clientId);
+
+            // ============================================================
+            // SEC-ADV-001: Check if client is already flagged as malicious
+            // ============================================================
+            const isKnownMalicious = metrics.isMaliciousClient(clientId);
 
             // ============================================================
             // 2. GET REDIS CLIENT
@@ -76,17 +82,13 @@ function rateLimiter(options = {}) {
                     reason: 'Redis unavailable',
                     action: 'ALLOW'
                 });
-                metrics.incrementFailOpen(); // FEAT-001
+                metrics.incrementFailOpen();
                 return next();
             }
 
             // ============================================================
             // PERF-001: DEFINE CUSTOM COMMAND (once)
             // ============================================================
-            // defineCommand registers the script in Redis and uses EVALSHA
-            // automatically. Saves bandwidth by sending only SHA instead
-            // of the entire script on each request.
-
             if (!isScriptDefined) {
                 redis.defineCommand('tokenBucket', {
                     numberOfKeys: 1,
@@ -98,15 +100,11 @@ function rateLimiter(options = {}) {
             // ============================================================
             // 3. EXECUTE LUA SCRIPT (Atomic Token Bucket via EVALSHA)
             // ============================================================
-            // ARCH-001: Timestamp now comes from Redis TIME (not Date.now anymore)
-            // Prevents clock drift between multiple Node.js servers
-
-            // PERF-001: Uses custom command (EVALSHA internally)
             const result = await redis.tokenBucket(
-                redisKey, // KEY
-                capacity, // ARGV[1]
-                refillRate, // ARGV[2]
-                cost // ARGV[3] (was ARGV[4], now removed timestamp)
+                redisKey,
+                capacity,
+                refillRate,
+                cost
             );
 
             const [allowed, remaining, resetTimestamp] = result;
@@ -124,27 +122,42 @@ function rateLimiter(options = {}) {
             if (allowed === 1) {
                 // ✅ ALLOWED
                 logger.auditAllow(clientId, remaining);
-                metrics.incrementAllowed(); // FEAT-001
-                metrics.recordResponseTime(Date.now() - startTime); // FEAT-001
+                metrics.incrementAllowed();
+                metrics.recordResponseTime(Date.now() - startTime);
                 return next();
             } else {
                 // ❌ BLOCKED - 429 Too Many Requests
-                logger.auditBlock(clientId, remaining);
-                metrics.incrementBlocked(); // FEAT-001
-                metrics.recordResponseTime(Date.now() - startTime); // FEAT-001
 
-                // ARCH-001: Calculate retry after using current timestamp
+                // SEC-ADV-001: Track violation and detect malicious behavior
+                const isMalicious = isKnownMalicious || metrics.trackViolation(clientId);
+
+                // Log with malicious flag
+                logger.auditBlock(clientId, remaining, isMalicious);
+
+                // Update metrics with malicious distinction
+                metrics.incrementBlocked(clientId, isMalicious);
+                metrics.recordResponseTime(Date.now() - startTime);
+
+                // Calculate retry after
                 const now = Math.floor(Date.now() / 1000);
                 const retryAfter = Math.max(0, resetTimestamp - now);
                 res.setHeader('Retry-After', retryAfter);
 
+                // SEC-ADV-001: Add threat indicator header for monitoring
+                if (isMalicious) {
+                    res.setHeader('X-Threat-Level', 'MALICIOUS');
+                }
+
                 return res.status(429).json({
                     error: 'Too Many Requests',
-                    message: 'Rate limit exceeded. Please slow down.',
+                    message: isMalicious
+                        ? 'Rate limit exceeded. Your activity has been flagged as suspicious.'
+                        : 'Rate limit exceeded. Please slow down.',
                     retry_after_seconds: retryAfter,
                     limit: capacity,
                     remaining: 0,
-                    reset: resetTimestamp
+                    reset: resetTimestamp,
+                    threat_detected: isMalicious
                 });
             }
 
@@ -152,7 +165,7 @@ function rateLimiter(options = {}) {
             // ============================================================
             // SEC-001: FAIL-OPEN IN CASE OF ERROR
             // ============================================================
-            metrics.incrementRedisError(); // FEAT-001
+            metrics.incrementRedisError();
             logger.error({
                 event_type: 'rate_limit_error',
                 message: error.message,

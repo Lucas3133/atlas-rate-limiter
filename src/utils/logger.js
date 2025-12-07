@@ -2,7 +2,7 @@
 // ATLAS RATE LIMITER - STRUCTURED LOGGER
 // ================================================================
 // OPS-001: Audit logs in structured JSON
-// ENHANCED: Visual colored logs to see blocks!
+// ENHANCED: Visual colored logs with malicious detection
 // ================================================================
 
 const config = require('../config');
@@ -15,8 +15,10 @@ const colors = {
     yellow: '\x1b[33m',
     cyan: '\x1b[36m',
     white: '\x1b[37m',
+    magenta: '\x1b[35m',
     bgRed: '\x1b[41m',
     bgGreen: '\x1b[42m',
+    bgMagenta: '\x1b[45m',
     bold: '\x1b[1m'
 };
 
@@ -66,23 +68,36 @@ const logger = {
     error: (data) => log('error', data),
 
     /**
-     * Block audit log (VISUAL!) 🚫
+     * Block audit log with malicious detection 🚫
+     * @param {string} clientId - Client identifier
+     * @param {number} remaining - Remaining tokens
+     * @param {boolean} isMalicious - SEC-ADV-001: Whether client is flagged as malicious
      */
-    auditBlock: (clientId, remaining) => {
+    auditBlock: (clientId, remaining, isMalicious = false) => {
         // Structured log (for production)
         log('warn', {
-            event_type: 'rate_limit_blocked',
+            event_type: isMalicious ? 'malicious_blocked' : 'rate_limit_blocked',
             client_id: clientId,
             action: 'DENY',
-            remaining_tokens: remaining
+            remaining_tokens: remaining,
+            is_malicious: isMalicious
         });
 
         // VISUAL colored log (for development)
-        console.log(
-            `${colors.bgRed}${colors.white}${colors.bold} 🚫 BLOCKED ${colors.reset} ` +
-            `${colors.red}${clientId}${colors.reset} ` +
-            `(${colors.yellow}${remaining} tokens${colors.reset})`
-        );
+        if (isMalicious) {
+            // SEC-ADV-001: Special visual for malicious clients
+            console.log(
+                `${colors.bgMagenta}${colors.white}${colors.bold} ⚠️ THREAT BLOCKED ${colors.reset} ` +
+                `${colors.magenta}${clientId}${colors.reset} ` +
+                `(${colors.red}MALICIOUS${colors.reset})`
+            );
+        } else {
+            console.log(
+                `${colors.bgRed}${colors.white}${colors.bold} 🚫 BLOCKED ${colors.reset} ` +
+                `${colors.red}${clientId}${colors.reset} ` +
+                `(${colors.yellow}${remaining} tokens${colors.reset})`
+            );
+        }
     },
 
     /**
@@ -107,6 +122,24 @@ const logger = {
                 `(${colors.green}${remaining} tokens${colors.reset})`
             );
         }
+    },
+
+    /**
+     * SEC-ADV-001: Log when a client is flagged as malicious
+     */
+    auditMaliciousDetected: (clientId) => {
+        log('warn', {
+            event_type: 'malicious_client_detected',
+            client_id: clientId,
+            action: 'FLAGGED',
+            message: 'Client exceeded violation threshold'
+        });
+
+        console.log(
+            `${colors.bgMagenta}${colors.white}${colors.bold} 🚨 THREAT DETECTED ${colors.reset} ` +
+            `${colors.magenta}${clientId}${colors.reset} ` +
+            `flagged as ${colors.red}MALICIOUS${colors.reset}`
+        );
     }
 };
 

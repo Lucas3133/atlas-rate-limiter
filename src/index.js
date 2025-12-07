@@ -77,6 +77,12 @@ app.get('/metrics', rateLimiter(RATE_LIMITS.METRICS), (req, res) => {
     res.send(metrics.toPrometheus());
 });
 
+// METRIC-ADV-001: JSON stats endpoint for dashboard
+app.get('/api/stats', rateLimiter(RATE_LIMITS.METRICS), (req, res) => {
+    const metrics = require('./utils/metrics');
+    res.json(metrics.getSummary());
+});
+
 
 // Public route (WITH default rate limit)
 app.get('/api/public', rateLimiter(), (req, res) => {
