@@ -32,10 +32,12 @@ class PrometheusMetrics {
         this.bannedClients = new Map();
 
         // ============================================================
-        // HISTOGRAMS (records last values)
+        // HISTOGRAMS (records last values - PERF-001: Circular Buffer)
         // ============================================================
-        this.responseTimesMs = [];
+        this.responseTimesMs = new Array(1000);
         this.maxHistorySize = 1000;
+        this.cursor = 0;  // Circular buffer write position
+        this.bufferFilled = false;  // Track if we've wrapped around
 
         // SEC-ADV-001: Track violation counts per client
         // Format: { clientId: { count: number, firstViolation: timestamp } }
@@ -192,12 +194,15 @@ class PrometheusMetrics {
     }
 
     /**
-     * Records response time
+     * Records response time - PERF-001: O(1) circular buffer
      */
     recordResponseTime(timeMs) {
-        this.responseTimesMs.push(timeMs);
-        if (this.responseTimesMs.length > this.maxHistorySize) {
-            this.responseTimesMs.shift();
+        this.responseTimesMs[this.cursor] = timeMs;
+        this.cursor = (this.cursor + 1) % this.maxHistorySize;
+
+        // Mark as filled once we wrap around
+        if (this.cursor === 0 && !this.bufferFilled) {
+            this.bufferFilled = true;
         }
     }
 
@@ -209,11 +214,16 @@ class PrometheusMetrics {
     }
 
     /**
-     * Calculates percentile of a number array
+     * Calculates percentile of a number array - PERF-001: Circular buffer aware
      */
     percentile(arr, p) {
-        if (arr.length === 0) return 0;
-        const sorted = [...arr].sort((a, b) => a - b);
+        // Get valid values from circular buffer
+        const validValues = this.bufferFilled
+            ? arr.filter(v => v !== undefined)
+            : arr.slice(0, this.cursor);
+
+        if (validValues.length === 0) return 0;
+        const sorted = [...validValues].sort((a, b) => a - b);
         const index = Math.ceil((p / 100) * sorted.length) - 1;
         return sorted[Math.max(0, index)];
     }
@@ -436,7 +446,9 @@ class PrometheusMetrics {
         this.threatsNeutralized = 0;
         this.activeClients.clear();
         this.bannedClients.clear();
-        this.responseTimesMs = [];
+        this.responseTimesMs = new Array(1000);
+        this.cursor = 0;
+        this.bufferFilled = false;
         this.violationTracker.clear();
     }
 }

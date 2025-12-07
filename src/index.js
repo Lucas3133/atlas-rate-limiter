@@ -3,6 +3,7 @@
 // ================================================================
 
 const express = require('express');
+const helmet = require('helmet');  // SEC-001: Security middleware
 const rateLimiter = require('./middleware/rateLimiter');
 const { healthCheck } = require('./core/redisClient');
 const config = require('./config');
@@ -23,6 +24,12 @@ const app = express();
 
 // FIX-002: Configurable Trust Proxy via TRUST_PROXY in .env
 app.set('trust proxy', config.security.trustProxy);
+
+// ============================================================
+// SEC-001: SECURITY HEADERS (Helmet.js)
+// ============================================================
+// Protects against XSS, clickjacking, MIME sniffing, etc.
+app.use(helmet());
 
 // ============================================================
 // MIDDLEWARES

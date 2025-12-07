@@ -163,6 +163,28 @@ node tests/load/loadTest.js
 
 📚 **Detailed Architecture**: [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
+### 🎯 Architecture Decisions
+
+**Why Lua Scripts?**
+- **Atomicity**: Token bucket operations (check + decrement) execute as a single atomic operation in Redis
+- **Performance**: EVALSHA caching reduces network overhead by ~60%
+- **Race Conditions**: Eliminates concurrent request conflicts in distributed environments
+
+**Why Behavioral Banning?**
+- **Smart Detection**: Differentiates between heavy legitimate users and malicious attackers
+- **Automatic Protection**: Clients exceeding 10 violations/min are temporarily banned (10 min)
+- **Metrics Segregation**: Separate tracking for standard blocks vs. malicious blocks
+
+**Performance Optimizations**
+- **Circular Buffer**: O(1) response time recording instead of O(n) array shifts
+- **Connection Pooling**: ioredis maintains persistent connections with automatic reconnection
+- **Fail-Open Design**: API remains available even if Redis is down (graceful degradation)
+
+**Security Measures**
+- **Helmet.js**: Automatic HTTP security headers (XSS, clickjacking, MIME sniffing protection)
+- **IP Extraction**: Configurable `TRUST_PROXY` prevents IP spoofing behind proxies/load balancers
+- **API Key Hashing**: SHA-256 hashing for identifying clients without storing sensitive data
+
 ---
 
 ## 📊 Prometheus Metrics

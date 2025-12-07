@@ -1,8 +1,5 @@
-// ================================================================
-// ATLAS RATE LIMITER - RESILIENT REDIS CONNECTION
-// ================================================================
+// ATLAS RATE LIMITER - Resilient Redis Connection
 // INFRA-001: TCP/TLS connection with Upstash using ioredis
-// ================================================================
 
 const Redis = require('ioredis');
 const config = require('../config');
@@ -23,9 +20,7 @@ function createRedisClient() {
 
     try {
         redisClient = new Redis(config.redis.url, {
-            // ============================================================
-            // RESILIENCE
-            // ============================================================
+            // Resilience configuration
             connectTimeout: config.redis.timeoutMs,
             commandTimeout: config.redis.timeoutMs,
 
@@ -45,22 +40,16 @@ function createRedisClient() {
                 return Math.min(times * 1000, 10000);
             },
 
-            // ============================================================
-            // SECURITY
-            // ============================================================
+            // Security configuration
             tls: config.redis.url.startsWith('rediss://') ? {} : undefined,
 
-            // ============================================================
-            // PERFORMANCE
-            // ============================================================
+            // Performance optimization
             enableReadyCheck: false,
             maxRetriesPerRequest: 1,
             lazyConnect: false, // Connect immediately
         });
 
-        // ============================================================
-        // EVENT LISTENERS (Observability)
-        // ============================================================
+        // Event listeners for observability
 
         redisClient.on('connect', () => {
             console.log('\n✅ ========================================');
