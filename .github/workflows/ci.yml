@@ -1,7 +1,7 @@
 # ================================================================
 # ATLAS RATE LIMITER - CI/CD PIPELINE
 # ================================================================
-# QA-001: Testes automáticos a cada push
+# QA-001: Automated tests on every push
 # ================================================================
 
 name: CI - Atlas Rate Limiter
@@ -82,7 +82,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================
-  # LOAD TEST (Opcional - requer Redis)
+  # LOAD TEST (Optional - requires Redis)
   # ============================================================
   # load-test:
   #   name: 🔥 Load Test

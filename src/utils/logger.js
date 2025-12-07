@@ -1,13 +1,13 @@
 // ================================================================
-// ATLAS RATE LIMITER - LOGGER ESTRUTURADO
+// ATLAS RATE LIMITER - STRUCTURED LOGGER
 // ================================================================
-// OPS-001: Logs de auditoria em JSON estruturado
-// MELHORADO: Logs visuais coloridos para ver bloqueios!
+// OPS-001: Audit logs in structured JSON
+// ENHANCED: Visual colored logs to see blocks!
 // ================================================================
 
 const config = require('../config');
 
-// Cores ANSI para terminal
+// ANSI colors for terminal
 const colors = {
     reset: '\x1b[0m',
     red: '\x1b[31m',
@@ -21,9 +21,9 @@ const colors = {
 };
 
 /**
- * Formata log em JSON estruturado
+ * Formats log in structured JSON
  * @param {string} level - Log level (info, warn, error)
- * @param {object} data - Dados do log
+ * @param {object} data - Log data
  */
 function log(level, data) {
     const logEntry = {
@@ -33,7 +33,7 @@ function log(level, data) {
         ...data
     };
 
-    // Em produção: logar JSON puro (fácil de parsear)
+    // In production: log pure JSON (easy to parse)
     if (config.env === 'production') {
         console.log(JSON.stringify(logEntry));
     }
@@ -41,35 +41,35 @@ function log(level, data) {
 
 const logger = {
     /**
-     * Log informativo
+     * Informational log
      */
     info: (data) => log('info', data),
 
     /**
-     * Log de debug (desenvolvimento)
+     * Debug log (development)
      */
     debug: (data) => {
-        // Só loga em desenvolvimento para não poluir produção
+        // Only logs in development to avoid polluting production
         if (config.env === 'development') {
             log('debug', data);
         }
     },
 
     /**
-     * Log de aviso
+     * Warning log
      */
     warn: (data) => log('warn', data),
 
     /**
-     * Log de erro
+     * Error log
      */
     error: (data) => log('error', data),
 
     /**
-     * Log de auditoria de bloqueio (VISUAL!) 🚫
+     * Block audit log (VISUAL!) 🚫
      */
     auditBlock: (clientId, remaining) => {
-        // Log estruturado (para produção)
+        // Structured log (for production)
         log('warn', {
             event_type: 'rate_limit_blocked',
             client_id: clientId,
@@ -77,19 +77,19 @@ const logger = {
             remaining_tokens: remaining
         });
 
-        // Log VISUAL colorido (para desenvolvimento)
+        // VISUAL colored log (for development)
         console.log(
-            `${colors.bgRed}${colors.white}${colors.bold} 🚫 BLOQUEADO ${colors.reset} ` +
+            `${colors.bgRed}${colors.white}${colors.bold} 🚫 BLOCKED ${colors.reset} ` +
             `${colors.red}${clientId}${colors.reset} ` +
-            `(${colors.yellow}${remaining} fichas${colors.reset})`
+            `(${colors.yellow}${remaining} tokens${colors.reset})`
         );
     },
 
     /**
-     * Log de auditoria de permissão ✅
+     * Allow audit log ✅
      */
     auditAllow: (clientId, remaining) => {
-        // Log estruturado (para produção)
+        // Structured log (for production)
         if (config.env === 'production') {
             log('info', {
                 event_type: 'rate_limit_allowed',
@@ -99,12 +99,12 @@ const logger = {
             });
         }
 
-        // Log VISUAL colorido (desenvolvimento)
+        // VISUAL colored log (development)
         if (config.env === 'development') {
             console.log(
-                `${colors.green}✅ PERMITIDO${colors.reset} ` +
+                `${colors.green}✅ ALLOWED${colors.reset} ` +
                 `${colors.cyan}${clientId}${colors.reset} ` +
-                `(${colors.green}${remaining} fichas${colors.reset})`
+                `(${colors.green}${remaining} tokens${colors.reset})`
             );
         }
     }

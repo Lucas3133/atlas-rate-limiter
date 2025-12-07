@@ -1,18 +1,18 @@
 // ================================================================
-// ATLAS RATE LIMITER - TESTE DE CARGA
+// ATLAS RATE LIMITER - LOAD TEST
 // ================================================================
-// FIX-003: Simula múltiplas requisições para testar rate limiting
-// Agora lê a porta dinamicamente do .env
+// FIX-003: Simulates multiple requests to test rate limiting
+// Now reads port dynamically from .env
 // ================================================================
 
-require('dotenv').config(); // FIX-003: Carregar variáveis do .env
+require('dotenv').config(); // FIX-003: Load variables from .env
 
 const http = require('http');
 
-// FIX-003: Porta dinâmica via .env (fallback para 3000)
+// FIX-003: Dynamic port via .env (fallback to 3000)
 const PORT = process.env.PORT || 3000;
 const TARGET_URL = `http://localhost:${PORT}/api/public`;
-const TOTAL_REQUESTS = 150; // Mais que o limite (100)
+const TOTAL_REQUESTS = 150; // More than limit (100)
 const CONCURRENT_REQUESTS = 10;
 
 let successCount = 0;
@@ -20,7 +20,7 @@ let blockedCount = 0;
 let errorCount = 0;
 
 /**
- * Faz uma requisição HTTP
+ * Makes an HTTP request
  */
 function makeRequest() {
     return new Promise((resolve) => {
@@ -31,38 +31,38 @@ function makeRequest() {
             res.on('end', () => {
                 if (res.statusCode === 200) {
                     successCount++;
-                    console.log(`✅ [${successCount + blockedCount}/${TOTAL_REQUESTS}] Permitida (200)`);
+                    console.log(`✅ [${successCount + blockedCount}/${TOTAL_REQUESTS}] Allowed (200)`);
                 } else if (res.statusCode === 429) {
                     blockedCount++;
-                    console.log(`🚫 [${successCount + blockedCount}/${TOTAL_REQUESTS}] Bloqueada (429)`);
+                    console.log(`🚫 [${successCount + blockedCount}/${TOTAL_REQUESTS}] Blocked (429)`);
                 }
                 resolve();
             });
         }).on('error', (err) => {
             errorCount++;
-            console.error(`❌ Erro: ${err.message}`);
+            console.error(`❌ Error: ${err.message}`);
             resolve();
         });
     });
 }
 
 /**
- * Executa teste de carga
+ * Runs load test
  */
 async function runLoadTest() {
     console.log('');
     console.log('========================================');
-    console.log('🔥 TESTE DE CARGA - ATLAS RATE LIMITER');
+    console.log('🔥 LOAD TEST - ATLAS RATE LIMITER');
     console.log('========================================');
     console.log(`Target: ${TARGET_URL}`);
-    console.log(`Total de requisições: ${TOTAL_REQUESTS}`);
-    console.log(`Concorrência: ${CONCURRENT_REQUESTS}`);
+    console.log(`Total requests: ${TOTAL_REQUESTS}`);
+    console.log(`Concurrency: ${CONCURRENT_REQUESTS}`);
     console.log('========================================');
     console.log('');
 
     const startTime = Date.now();
 
-    // Faz requisições em lotes concorrentes
+    // Make requests in concurrent batches
     for (let i = 0; i < TOTAL_REQUESTS; i += CONCURRENT_REQUESTS) {
         const batch = [];
         for (let j = 0; j < CONCURRENT_REQUESTS && (i + j) < TOTAL_REQUESTS; j++) {
@@ -70,7 +70,7 @@ async function runLoadTest() {
         }
         await Promise.all(batch);
 
-        // Pequeno delay entre lotes (simula carga mais real)
+        // Small delay between batches (simulates more realistic load)
         await new Promise(resolve => setTimeout(resolve, 100));
     }
 
@@ -78,31 +78,31 @@ async function runLoadTest() {
     const duration = ((endTime - startTime) / 1000).toFixed(2);
 
     // ============================================================
-    // RESULTADO
+    // RESULT
     // ============================================================
     console.log('');
     console.log('========================================');
-    console.log('📊 RESULTADOS');
+    console.log('📊 RESULTS');
     console.log('========================================');
-    console.log(`✅ Permitidas: ${successCount}`);
-    console.log(`🚫 Bloqueadas (429): ${blockedCount}`);
-    console.log(`❌ Erros: ${errorCount}`);
-    console.log(`⏱️  Duração: ${duration}s`);
-    console.log(`📈 Taxa: ${(TOTAL_REQUESTS / duration).toFixed(2)} req/s`);
+    console.log(`✅ Allowed: ${successCount}`);
+    console.log(`🚫 Blocked (429): ${blockedCount}`);
+    console.log(`❌ Errors: ${errorCount}`);
+    console.log(`⏱️  Duration: ${duration}s`);
+    console.log(`📈 Rate: ${(TOTAL_REQUESTS / duration).toFixed(2)} req/s`);
     console.log('========================================');
     console.log('');
 
-    // Validação
+    // Validation
     if (blockedCount > 0) {
-        console.log('✅ SUCESSO: Rate limiter está bloqueando requisições!');
+        console.log('✅ SUCCESS: Rate limiter is blocking requests!');
     } else {
-        console.log('⚠️  ATENÇÃO: Nenhuma requisição foi bloqueada. Verifique configuração.');
+        console.log('⚠️  WARNING: No requests were blocked. Check configuration.');
     }
 
     if (successCount > 100) {
-        console.log('⚠️  ATENÇÃO: Mais de 100 requisições passaram. Possível problema no rate limiter.');
+        console.log('⚠️  WARNING: More than 100 requests passed. Possible rate limiter issue.');
     }
 }
 
-// Executa teste
+// Run test
 runLoadTest().catch(console.error);

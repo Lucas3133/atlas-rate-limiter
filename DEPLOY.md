@@ -1,44 +1,44 @@
-# 🚀 Guia de Deploy - Atlas Rate Limiter
+# 🚀 Deployment Guide - Atlas Rate Limiter
 
-## Opção 1: Docker Local
+## Option 1: Local Docker
 
 ```bash
-# 1. Configurar ambiente
+# 1. Configure environment
 cp .env.example .env
-# Edite .env com seu UPSTASH_REDIS_URL
+# Edit .env with your UPSTASH_REDIS_URL
 
-# 2. Subir container
+# 2. Start container
 npm run docker:run
 
-# 3. Ver logs
+# 3. View logs
 npm run docker:logs
 
-# 4. Parar
+# 4. Stop
 npm run docker:stop
 ```
 
 ---
 
-## Opção 2: Railway
+## Option 2: Railway
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
 
-1. Clique no botão acima
-2. Configure as variáveis:
+1. Click the button above
+2. Configure the variables:
 ```env
 UPSTASH_REDIS_URL=redis://...
 TRUST_PROXY=1
 RATE_LIMIT_REFILL_RATE=1
 ```
-3. Deploy automático! 🎉
+3. Automatic deploy! 🎉
 
 ---
 
-## Opção 3: Render
+## Option 3: Render
 
-1. Vá em https://render.com
+1. Go to https://render.com
 2. New → Web Service
-3. Conecte o GitHub
+3. Connect GitHub
 4. Configure:
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
@@ -50,67 +50,67 @@ RATE_LIMIT_REFILL_RATE=1
 
 ---
 
-## Opção 4: Vercel (Serverless)
+## Option 4: Vercel (Serverless)
 
 ```bash
-# 1. Instalar Vercel CLI
+# 1. Install Vercel CLI
 npm i -g vercel
 
 # 2. Deploy
 vercel
 
-# 3. Configurar secrets
+# 3. Configure secrets
 vercel env add UPSTASH_REDIS_URL
 ```
 
 ---
 
-## Opção 5: Docker Registry (Produção)
+## Option 5: Docker Registry (Production)
 
 ```bash
-# Build otimizado
+# Optimized build
 docker build -t atlas-rate-limiter:1.0.0-beta .
 
-# Tag para registry
+# Tag for registry
 docker tag atlas-rate-limiter:1.0.0-beta \
-  seu-usuario/atlas-rate-limiter:latest
+  your-username/atlas-rate-limiter:latest
 
 # Push
-docker push seu-usuario/atlas-rate-limiter:latest
+docker push your-username/atlas-rate-limiter:latest
 
-# Deploy em servidor
-ssh user@servidor
-docker pull seu-usuario/atlas-rate-limiter:latest
+# Deploy on server
+ssh user@server
+docker pull your-username/atlas-rate-limiter:latest
 docker run -d \
   -p 3000:3000 \
   -e UPSTASH_REDIS_URL="redis://..." \
   -e TRUST_PROXY=1 \
-  seu-usuario/atlas-rate-limiter:latest
+  your-username/atlas-rate-limiter:latest
 ```
 
 ---
 
-## ⚙️ Variáveis de Ambiente (Produção)
+## ⚙️ Environment Variables (Production)
 
-| Variável | Valor Recomendado | Obrigatório |
-|----------|-------------------|-------------|
-| `UPSTASH_REDIS_URL` | `redis://...` | ✅ Sim |
-| `TRUST_PROXY` | `1` ou `true` | ✅ Sim (em produção) |
-| `RATE_LIMIT_CAPACITY` | `100` | ❌ Não (padrão ok) |
-| `RATE_LIMIT_REFILL_RATE` | `1` | ❌ Não (padrão ok) |
-| `NODE_ENV` | `production` | ⚠️ Recomendado |
-| `PORT` | `3000` | ❌ Não |
+| Variable | Recommended Value | Required |
+|----------|-------------------|----------|
+| `UPSTASH_REDIS_URL` | `redis://...` | ✅ Yes |
+| `TRUST_PROXY` | `1` or `true` | ✅ Yes (in production) |
+| `RATE_LIMIT_CAPACITY` | `100` | ❌ No (default ok) |
+| `RATE_LIMIT_REFILL_RATE` | `1` | ❌ No (default ok) |
+| `NODE_ENV` | `production` | ⚠️ Recommended |
+| `PORT` | `3000` | ❌ No |
 
 ---
 
 ## 🔍 Health Check
 
-Todas as plataformas devem usar:
+All platforms should use:
 ```
 GET /health
 ```
 
-Resposta esperada:
+Expected response:
 ```json
 {
   "status": "ok",
@@ -123,7 +123,7 @@ Resposta esperada:
 
 ---
 
-## 📊 Monitoramento
+## 📊 Monitoring
 
 ### Logs
 ```bash
@@ -131,10 +131,10 @@ Resposta esperada:
 docker-compose logs -f
 
 # Railway/Render
-# Use a interface web
+# Use the web interface
 ```
 
-### Métricas (Futuro - FEAT-001)
+### Metrics (FEAT-001)
 ```
 GET /metrics  # Prometheus format
 ```

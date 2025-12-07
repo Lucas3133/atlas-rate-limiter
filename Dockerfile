@@ -1,25 +1,25 @@
 # ================================================================
 # ATLAS RATE LIMITER - DOCKERFILE MULTI-STAGE
 # ================================================================
-# OPS-001: Imagem otimizada para produção
+# OPS-001: Optimized image for production
 # ================================================================
 
 # ============================================================
-# STAGE 1: Build (Dependências)
+# STAGE 1: Build (Dependencies)
 # ============================================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar apenas package files primeiro (cache layer)
+# Copy only package files first (cache layer)
 COPY package*.json ./
 
-# Instalar APENAS dependências de produção
+# Install ONLY production dependencies
 RUN npm ci --only=production && \
     npm cache clean --force
 
 # ============================================================
-# STAGE 2: Runtime (Produção)
+# STAGE 2: Runtime (Production)
 # ============================================================
 FROM node:20-alpine
 
@@ -28,29 +28,29 @@ LABEL maintainer="Atlas Shield Team"
 LABEL description="High-performance distributed rate limiter with Redis"
 LABEL version="1.0.0-beta"
 
-# Segurança: Criar usuário não-root
+# Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 WORKDIR /app
 
-# Copiar node_modules do builder
+# Copy node_modules from builder
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 
-# Copiar código-fonte
+# Copy source code
 COPY --chown=nodejs:nodejs src ./src
 COPY --chown=nodejs:nodejs public ./public
 COPY --chown=nodejs:nodejs package*.json ./
 
-# Mudar para usuário não-root
+# Switch to non-root user
 USER nodejs
 
-# Expor porta (configurável via ENV)
+# Expose port (configurable via ENV)
 EXPOSE 3000
 
-# Health check (Railway/Render usam isso)
+# Health check (Railway/Render use this)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Comando de inicialização
+# Startup command
 CMD ["node", "src/index.js"]

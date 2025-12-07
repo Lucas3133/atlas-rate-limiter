@@ -1,91 +1,91 @@
-# 🧪 Guia de Testes - Atlas Rate Limiter v1.0.0-beta
+# 🧪 Testing Guide - Atlas Rate Limiter v1.0.0-beta
 
-## ✅ Checklist Completo de Validação
+## ✅ Complete Validation Checklist
 
-Execute estes testes após implementar TODAS as fases (1, 2 e 3).
+Run these tests after implementing ALL phases (1, 2 and 3).
 
 ---
 
-## 📋 FASE 1: HOTFIXES - Testes Básicos
+## 📋 PHASE 1: HOTFIXES - Basic Tests
 
-### ✅ FIX-001: Validar Refill Rate
+### ✅ FIX-001: Validate Refill Rate
 ```bash
-# 1. Confirmar que .env tem RATE_LIMIT_REFILL_RATE=1
+# 1. Confirm .env has RATE_LIMIT_REFILL_RATE=1
 cat .env | grep REFILL
 
-# 2. Iniciar servidor
+# 2. Start server
 npm start
 
-# 3. Verificar startup log (deve mostrar "@1/s")
-# Output esperado: "⚡ Token Bucket: 100 fichas @ 1/s"
+# 3. Check startup log (should show "@1/s")
+# Expected output: "⚡ Token Bucket: 100 tokens @ 1/s"
 ```
 
-### ✅ FIX-002: Validar Trust Proxy
+### ✅ FIX-002: Validate Trust Proxy
 ```bash
-# 1. Confirmar que .env tem TRUST_PROXY=false (local dev)
+# 1. Confirm .env has TRUST_PROXY=false (local dev)
 cat .env | grep TRUST_PROXY
 
-# 2. Iniciar servidor e checar log
+# 2. Start server and check log
 npm start
 
-# Output esperado: "🔒 Trust Proxy: false"
+# Expected output: "🔒 Trust Proxy: false"
 ```
 
-### ✅ FIX-003: Teste de Porta Dinâmica
+### ✅ FIX-003: Dynamic Port Test
 ```bash
-# Terminal 1: Rodar na porta 8080
+# Terminal 1: Run on port 8080
 $env:PORT=8080; npm start
 
-# Terminal 2: Teste de carga deve usar porta correta
+# Terminal 2: Load test should use correct port
 node tests/load/loadTest.js
 
-# Deve conectar em localhost:8080 (não 3000)
+# Should connect to localhost:8080 (not 3000)
 ```
 
 ---
 
-## 🐳 FASE 2: PROFISSIONALIZAÇÃO - Testes DevOps
+## 🐳 PHASE 2: PROFESSIONALIZATION - DevOps Tests
 
 ### ✅ OPS-001: Docker Build & Run
 ```bash
-# 1. Build da imagem
+# 1. Build image
 npm run docker:build
 
-# 2. Verificar tamanho (~150MB esperado)
+# 2. Check size (~150MB expected)
 docker images | grep atlas-rate-limiter
 
-# 3. Rodar container
+# 3. Run container
 npm run docker:run
 
-# 4. Verificar health check
+# 4. Check health
 curl http://localhost:3000/health
 
-# 5. Ver logs
+# 5. View logs
 npm run docker:logs
 
-# 6. Parar
+# 6. Stop
 npm run docker:stop
 ```
 
-### ✅ SEC-003: Proteção de Arquivos Estáticos
+### ✅ SEC-003: Static File Protection
 ```bash
-# 1. Acessar dashboard HTML
+# 1. Access HTML dashboard
 open http://localhost:3000
 
-# 2. Verificar que carrega (não tem rate limit bloqueando)
-# 3. Tentar F5 umas 20x rápido - deve continuar funcionando
-# (Proteção real virá do CDN em produção)
+# 2. Verify it loads (no rate limit blocking)
+# 3. Try F5 about 20x fast - should keep working
+# (Real protection comes from CDN in production)
 ```
 
 ### ✅ QA-001: GitHub Actions CI
 ```bash
-# 1. Push para GitHub
+# 1. Push to GitHub
 git add .
-git commit -m "feat: fase 1, 2 e 3 completas"
+git commit -m "feat: phases 1, 2 and 3 complete"
 git push origin main
 
-# 2. Ir no GitHub > Actions
-# 3. Verificar que pipeline rodou com sucesso:
+# 2. Go to GitHub > Actions
+# 3. Verify pipeline ran successfully:
 #    - ✅ Lint & Syntax
 #    - ✅ Security Audit  
 #    - ✅ Docker Build
@@ -93,52 +93,52 @@ git push origin main
 
 ---
 
-## 🚀 FASE 3: ARQUITETURA SÊNIOR - Testes Avançados
+## 🚀 PHASE 3: SENIOR ARCHITECTURE - Advanced Tests
 
 ### ✅ ARCH-001: Clock Drift Prevention
 ```bash
-# Este teste valida que múltiplos servidores não dessincroni zam
+# This test validates that multiple servers don't desynchronize
 
-# Terminal 1: Servidor na porta 3000
+# Terminal 1: Server on port 3000
 npm start
 
-# Terminal 2: Fazer 10 requisições em 5 segundos
+# Terminal 2: Make 10 requests in 5 seconds
 for ($i=0; $i -lt 10; $i++) {
     curl http://localhost:3000/api/login-test
     Start-Sleep -Milliseconds 500
 }
 
-# Verificar headers X-RateLimit-Reset
-# Todos devem usar timestamp do Redis (consistente)
+# Check X-RateLimit-Reset headers
+# All should use Redis timestamp (consistent)
 ```
 
 ### ✅ PERF-001: Script Caching (EVALSHA)
 ```bash
-# 1. Rodar servidor com logs Redis (se local)
+# 1. Run server with Redis logs (if local)
 npm start
 
-# 2. Primeira requisição - carrega script
+# 2. First request - loads script
 curl -v http://localhost:3000/api/public
 
-# 3. Segunda requisição - usa EVALSHA (cache)
+# 3. Second request - uses EVALSHA (cache)
 curl -v http://localhost:3000/api/public
 
-# Benefício: Economiza ~3KB por request
-# Verificar no Redis Monitor (se tiver acesso):
+# Benefit: Saves ~3KB per request
+# Check in Redis Monitor (if you have access):
 # redis-cli monitor
-# Deve ver EVALSHA em vez de EVAL após primeira vez
+# Should see EVALSHA instead of EVAL after first time
 ```
 
 ### ✅ FEAT-001: Prometheus Metrics
 ```bash
-# 1. Fazer algumas requisições para gerar métricas
-curl http://localhost:3000/api/public  # 5x permitidas
-curl http://localhost:3000/api/login-test  # 10x (8 bloqueadas)
+# 1. Make some requests to generate metrics
+curl http://localhost:3000/api/public  # 5x allowed
+curl http://localhost:3000/api/login-test  # 10x (8 blocked)
 
-# 2. Acessar /metrics
+# 2. Access /metrics
 curl http://localhost:3000/metrics
 
-# Output esperado (formato Prometheus):
+# Expected output (Prometheus format):
 # atlas_requests_allowed_total 5
 # atlas_requests_blocked_total 8
 # atlas_active_clients 1
@@ -148,75 +148,75 @@ curl http://localhost:3000/metrics
 
 ---
 
-## 🔥 TESTE DE CARGA COMPLETO
+## 🔥 COMPLETE LOAD TEST
 
 ```bash
-# Terminal 1: Servidor rodando
+# Terminal 1: Server running
 npm start
 
-# Terminal 2: Teste de carga (150 requests)
+# Terminal 2: Load test (150 requests)
 node tests/load/loadTest.js
 
-# Output esperado:
-# ✅ Permitidas: ~100
-# 🚫 Bloqueadas (429): ~50
-# ❌ Erros: 0
-# ⏱️ Duração: ~15s
+# Expected output:
+# ✅ Allowed: ~100
+# 🚫 Blocked (429): ~50
+# ❌ Errors: 0
+# ⏱️ Duration: ~15s
 ```
 
-Resultados esperados:
-- Taxa de bloqueio: ~30-40%
-- Primeiras 100 requests passam
-- Depois bloqueia até recarregar (1 ficha/s)
+Expected results:
+- Block rate: ~30-40%
+- First 100 requests pass
+- Then blocks until refill (1 token/s)
 
 ---
 
-## 📊 TESTE VISUAL: Dashboard HTML
+## 📊 VISUAL TEST: HTML Dashboard
 
 ```bash
-# 1. Abrir dashboard
+# 1. Open dashboard
 open http://localhost:3000
 
-# 2. Clicar no botão "Teste Rápido (Rate Limit Leve)"
-# 3. Clicar 20x rápido
-# 4. Verificar que algumas voltam 429 (bloqueadas)
-# 5. Ver contador de "Requests Bloqueadas" aumentar
+# 2. Click "Quick Test" button
+# 3. Click 20x fast
+# 4. Verify some return 429 (blocked)
+# 5. See "Blocked Requests" counter increase
 ```
 
 ---
 
-## 🔍 TESTES DE SEGURANÇA
+## 🔍 SECURITY TESTS
 
 ### ✅ Fail-Open (Redis Offline)
 ```bash
-# 1. Parar Redis (ou usar URL inválida no .env)
+# 1. Stop Redis (or use invalid URL in .env)
 # UPSTASH_REDIS_URL=redis://fake:fake@fake.io:6379
 
-# 2. Iniciar servidor
+# 2. Start server
 npm start
 
-# 3. Fazer requisição
+# 3. Make request
 curl http://localhost:3000/api/public
 
-# Esperado: 200 OK (permite com warning no log)
+# Expected: 200 OK (allows with warning in log)
 # Log: "⚠️ rate_limit_fail_open"
 ```
 
 ### ✅ IP Spoofing Protection
 ```bash
-# 1. Com TRUST_PROXY=false (local dev)
+# 1. With TRUST_PROXY=false (local dev)
 curl -H "X-Forwarded-For: 1.2.3.4" http://localhost:3000/api/public
 
-# 2. Rate limiter deve usar IP real, NÃO o forjado
-# 3. Fazer 150 requests - deve bloquear baseado no IP real
+# 2. Rate limiter should use real IP, NOT the forged one
+# 3. Make 150 requests - should block based on real IP
 ```
 
 ---
 
-## 📈 TESTE DE PERFORMANCE
+## 📈 PERFORMANCE TEST
 
 ```powershell
-# PowerShell - 1000 requests concorrentes
+# PowerShell - 1000 concurrent requests
 $jobs = @()
 for ($i=0; $i -lt 1000; $i++) {
     $jobs += Start-Job { 
@@ -225,86 +225,86 @@ for ($i=0; $i -lt 1000; $i++) {
 }
 $jobs | Wait-Job | Receive-Job
 
-# Verificar:
-# - Servidor não crashed
-# - Métricas mostram números corretos
+# Verify:
+# - Server didn't crash
+# - Metrics show correct numbers
 ```
 
 ---
 
-## ✅ CHECKLIST FINAL - Validação Completa
+## ✅ FINAL CHECKLIST - Complete Validation
 
-| Categoria | Teste | Status |
-|-----------|-------|--------|
-| **Fase 1** | Refill Rate = 1 | ☐ |
-| **Fase 1** | Trust Proxy dinâmico | ☐ |
-| **Fase 1** | Porta dinâmica (loadTest) | ☐ |
-| **Fase 2** | Docker build < 200MB | ☐ |
-| **Fase 2** | Docker Compose sobe ok | ☐ |
-| **Fase 2** | GitHub Actions CI passa | ☐ |
-| **Fase 3** | Clock drift via redis.TIME | ☐ |
-| **Fase 3** | EVALSHA caching ativo | ☐ |
-| **Fase 3** | /metrics retorna Prometheus | ☐ |
-| **Segurança** | Fail-open funciona | ☐ |
-| **Segurança** | IP spoofing bloqueado | ☐ |
-| **Performance** | Teste de carga passa | ☐ |
-| **UX** | Dashboard HTML funciona | ☐ |
+| Category | Test | Status |
+|----------|------|--------|
+| **Phase 1** | Refill Rate = 1 | ☐ |
+| **Phase 1** | Dynamic Trust Proxy | ☐ |
+| **Phase 1** | Dynamic port (loadTest) | ☐ |
+| **Phase 2** | Docker build < 200MB | ☐ |
+| **Phase 2** | Docker Compose starts ok | ☐ |
+| **Phase 2** | GitHub Actions CI passes | ☐ |
+| **Phase 3** | Clock drift via redis.TIME | ☐ |
+| **Phase 3** | EVALSHA caching active | ☐ |
+| **Phase 3** | /metrics returns Prometheus | ☐ |
+| **Security** | Fail-open works | ☐ |
+| **Security** | IP spoofing blocked | ☐ |
+| **Performance** | Load test passes | ☐ |
+| **UX** | HTML Dashboard works | ☐ |
 
 ---
 
-## 🎯 CRITÉRIOS DE SUCESSO
+## 🎯 SUCCESS CRITERIA
 
-### ✅ Mínimo Aceitável (MVP)
-- [x] Todos testes Fase 1 passam
-- [x] Servidor inicia sem erros
-- [x] Rate limiting funciona (bloqueia excesso)
-- [x] Fail-open ativo (segurança)
+### ✅ Minimum Acceptable (MVP)
+- [x] All Phase 1 tests pass
+- [x] Server starts without errors
+- [x] Rate limiting works (blocks excess)
+- [x] Fail-open active (security)
 
-### ✅ Production Ready (Recomendado)
+### ✅ Production Ready (Recommended)
 - [x] MVP +
-- [x] Docker funciona
-- [x] CI/CD configurado
-- [x] Métricas Prometheus funcionando
+- [x] Docker works
+- [x] CI/CD configured
+- [x] Prometheus metrics working
 
 ### ✅ Enterprise Grade (Ideal)
 - [x] Production Ready +
-- [x] Clock drift corrigido
-- [x] Script caching otimizado
-- [x] Teste de carga 1000+ requests passa
-- [x] Documentação completa (README, DEPLOY, ARCH)
+- [x] Clock drift fixed
+- [x] Script caching optimized
+- [x] 1000+ request load test passes
+- [x] Complete documentation (README, DEPLOY, ARCH)
 
 ---
 
 ## 🚨 Troubleshooting
 
-### Erro: "UPSTASH_REDIS_URL não configurado"
+### Error: "UPSTASH_REDIS_URL not configured"
 ```bash
-# Copiar .env.example para .env
+# Copy .env.example to .env
 cp .env.example .env
-# Editar .env com suas credenciais Upstash
+# Edit .env with your Upstash credentials
 ```
 
-### Erro: "Port 3000 already in use"
+### Error: "Port 3000 already in use"
 ```bash
-# Usar outra porta
+# Use another port
 $env:PORT=8080; npm start
 ```
 
-### Erro: "Docker build failed"
+### Error: "Docker build failed"
 ```bash
-# Verificar que node_modules não está em .dockerignore
-# Rebuild sem cache
+# Verify that node_modules is not in .dockerignore
+# Rebuild without cache
 docker build --no-cache -t atlas-rate-limiter .
 ```
 
 ---
 
-## 📞 Suporte
+## 📞 Support
 
-Se algum teste falhar:
-1. Verificar logs do servidor (`npm start`)
-2. Checar `.env` (variáveis corretas?)
-3. Validar conexão Redis (Upstash ativo?)
-4. Ver `ARCHITECTURE.md` para detalhes técnicos
+If any test fails:
+1. Check server logs (`npm start`)
+2. Verify `.env` (correct variables?)
+3. Validate Redis connection (Upstash active?)
+4. See `ARCHITECTURE.md` for technical details
 
-**Versão testada**: Node.js 20, Redis 7+
+**Tested version**: Node.js 20, Redis 7+

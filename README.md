@@ -1,145 +1,241 @@
-# 🛡️ Atlas Rate Limiter (Shield)
+# 🛡️ Atlas Rate Limiter
 
 [![CI Status](https://github.com/Lucas3133/atlas-rate-limiter/workflows/CI%20-%20Atlas%20Rate%20Limiter/badge.svg)](https://github.com/Lucas3133/atlas-rate-limiter/actions)
 [![Deploy Status](https://img.shields.io/badge/render-deployed-success?logo=render)](https://atlas-rate-limiter.onrender.com)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen?logo=node.js)](https://nodejs.org)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Redis](https://img.shields.io/badge/redis-upstash-red?logo=redis)](https://upstash.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?logo=docker)](https://hub.docker.com)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow?logo=javascript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-> Rate limiter distribuído de alta performance usando Redis + Token Bucket Algorithm
+> **High-performance distributed rate limiter** using Redis + Token Bucket Algorithm. Perfect for protecting your APIs against abuse, DDoS attacks, and ensuring fair usage.
 
 ---
 
-## 🌐 Demo ao Vivo
+## ✨ Features
 
-**✨ Acesse o projeto funcionando:** [https://atlas-rate-limiter.onrender.com](https://atlas-rate-limiter.onrender.com)
+- 🪣 **Token Bucket Algorithm** - Industry-standard rate limiting with burst support
+- ⚡ **High Performance** - Atomic Lua scripts with EVALSHA caching
+- 🔄 **Distributed** - Works across multiple servers with Redis
+- 🛡️ **Fail-Open** - Maintains availability even if Redis is down
+- 📊 **Prometheus Metrics** - Built-in monitoring endpoint
+- 🐳 **Docker Ready** - Production-ready containerization
+- 🔒 **Secure** - Anti IP-spoofing, API key hashing, configurable trust proxy
+- 📱 **Interactive Dashboard** - Beautiful real-time monitoring UI
+
+---
+
+## 🌐 Live Demo
+
+**✨ Try it live:** [https://atlas-rate-limiter.onrender.com](https://atlas-rate-limiter.onrender.com)
 
 ![Atlas Rate Limiter Dashboard](https://raw.githubusercontent.com/Lucas3133/atlas-rate-limiter/main/.github/screenshots/dashboard.png)
 
-*Dashboard interativo com métricas em tempo real, estatísticas de rate limiting e endpoints para teste*
+*Interactive dashboard with real-time metrics, rate limiting statistics, and test endpoints*
 
 ---
 
 ## 🚀 Quick Start
 
-### Opção 1: Docker (Recomendado)
+### Option 1: Docker (Recommended)
 ```bash
-# 1. Configure o .env
+# 1. Configure .env
 cp .env.example .env
-# Edite .env com suas credenciais Upstash
+# Edit .env with your Upstash credentials
 
-# 2. Suba o container
+# 2. Start container
 docker-compose up -d
 
-# 3. Acesse
+# 3. Access
 open http://localhost:3000
 ```
 
-### Opção 2: Node.js Local
+### Option 2: Local Node.js
 ```bash
-# 1. Instalar dependências
+# 1. Install dependencies
 npm install
 
-# 2. Configurar .env
+# 2. Configure .env
 cp .env.example .env
 
-# 3. Rodar
+# 3. Run
 npm start
 ```
 
-## 📦 Deploy em Produção
+---
 
-### 🚀 CI/CD Automático (Recomendado)
+## 📦 Production Deployment
+
+### 🚀 Automatic CI/CD (Recommended)
 ```bash
-# 1. Configure o Render (veja guia abaixo)
-# 2. Push para main dispara deploy automático
+# Push to main triggers automatic deployment
 git push origin main
 
-# ✅ Deploy automático via GitHub Actions!
+# ✅ Automatic deployment via GitHub Actions!
 ```
 
-📚 **Guia Completo**: [CI_CD_SETUP.md](CI_CD_SETUP.md)
+📚 **Complete Guide**: [CI_CD_SETUP.md](CI_CD_SETUP.md)
 
 ### Railway / Render / Vercel
 ```bash
-# Configure estas variáveis de ambiente:
+# Configure these environment variables:
 UPSTASH_REDIS_URL=redis://...
 RATE_LIMIT_CAPACITY=100
 RATE_LIMIT_REFILL_RATE=1
-TRUST_PROXY=1  # ⚠️ Importante!
+TRUST_PROXY=1  # ⚠️ Important!
 ```
 
-### Docker Registry
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Rate Limit | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/health` | None | Health check |
+| `GET` | `/metrics` | 50 req/10s | Prometheus metrics |
+| `GET` | `/api/public` | 100 req/10s | Public endpoint |
+| `POST` | `/api/login` | 5 req/5s | Login (restrictive) |
+| `GET` | `/api/admin` | 1000 req/10s | Admin (permissive) |
+
+---
+
+## 🧪 Testing
+
+### Local Load Testing
 ```bash
-# Build
-docker build -t atlas-rate-limiter:latest .
-
-# Push (exemplo Docker Hub)
-docker tag atlas-rate-limiter:latest seu-usuario/atlas-rate-limiter:latest
-docker push seu-usuario/atlas-rate-limiter:latest
-```
-
-## 🧪 Testes
-
-### Teste de Carga Local
-```bash
-# Terminal 1: Rodar servidor
+# Terminal 1: Run server
 npm start
 
-# Terminal 2: Executar teste
+# Terminal 2: Execute test
 node tests/load/loadTest.js
 ```
 
-## 🔒 Segurança
+📚 **Complete Testing Guide**: [TESTING.md](TESTING.md)
 
-✅ **Implementado:**
-- FIX-001: Refill Rate seguro (1 ficha/s)
-- FIX-002: Trust Proxy configurável
-- FIX-003: Testes com porta dinâmica
-- **BUG-001**: Endpoint /metrics protegido com rate limit
-- **BUG-002**: Rota /api/no-limit restrita a desenvolvimento
-- **BUG-003**: Redis reconnection melhorado (60 tentativas, 10 min)
-- **BUG-004**: Proteção de arquivos estáticos (/public)
-- Dockerfile com usuário não-root
-- GitHub Actions CI/CD
+---
 
-✅ **Roadmap Concluído:**
-- ~~ARCH-001: Clock drift correction (Redis TIME)~~ ✓
-- ~~PERF-001: Script caching (EVALSHA)~~ ✓
+## 🔒 Security
 
-📄 **Relatório de Correções**: Ver [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md)
+✅ **Implemented:**
+- Secure Refill Rate (1 token/s default)
+- Configurable Trust Proxy
+- `/metrics` endpoint protected with rate limit
+- `/api/no-limit` route restricted to development
+- Improved Redis reconnection (60 attempts, 10 min)
+- Static file protection
+- Dockerfile with non-root user
+- API key hashing (SHA-256)
+- Anti IP-spoofing
 
-## 📊 Configuração
+📄 **Bug Fix Report**: [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md)
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `UPSTASH_REDIS_URL` | - | **Obrigatório** - URL do Redis |
-| `RATE_LIMIT_CAPACITY` | `100` | Capacidade do balde |
-| `RATE_LIMIT_REFILL_RATE` | `1` | Fichas/segundo (FIX-001) |
-| `TRUST_PROXY` | `false` | `false`/`1`/`true` (FIX-002) |
-| `PORT` | `3000` | Porta da API |
+---
 
-## 📚 Documentação
+## ⚙️ Configuration
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Arquitetura detalhada
-- [.env.example](.env.example) - Template de configuração
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `UPSTASH_REDIS_URL` | - | **Required** - Redis URL |
+| `RATE_LIMIT_CAPACITY` | `100` | Bucket capacity (tokens) |
+| `RATE_LIMIT_REFILL_RATE` | `1` | Tokens per second |
+| `TRUST_PROXY` | `false` | `false`/`1`/`true` |
+| `PORT` | `3000` | Server port |
 
-## 🤝 Contribuindo
+---
 
-```bash
-# 1. Fork o projeto
-# 2. Crie uma branch
-git checkout -b feature/minha-feature
+## 🏗️ Architecture
 
-# 3. Commit
-git commit -m "feat: minha feature incrível"
-
-# 4. Push
-git push origin feature/minha-feature
-
-# 5. Abra um Pull Request
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Client    │────▶│  Express.js  │────▶│   Redis     │
+│  Request    │     │  Middleware  │     │  (Upstash)  │
+└─────────────┘     └──────────────┘     └─────────────┘
+                           │
+                    Token Bucket
+                    Algorithm (Lua)
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+         ✅ ALLOW                  🚫 429 BLOCK
+         (has tokens)              (no tokens)
 ```
 
-## 📄 Licença
+📚 **Detailed Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
-MIT © 2025 Atlas Shield Team
+---
+
+## 📊 Prometheus Metrics
+
+```bash
+curl http://localhost:3000/metrics
+```
+
+```
+# Available metrics
+atlas_requests_allowed_total     # Allowed requests
+atlas_requests_blocked_total     # Blocked requests (429)
+atlas_active_clients             # Unique active clients
+atlas_block_rate_percent         # Block rate percentage
+atlas_response_time_ms           # Response time (p50, p95, p99)
+```
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Technical architecture & decisions |
+| [DEPLOY.md](DEPLOY.md) | Deployment guides (5 platforms) |
+| [TESTING.md](TESTING.md) | Complete testing checklist |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [CI_CD_SETUP.md](CI_CD_SETUP.md) | CI/CD configuration |
+| [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md) | Security fixes report |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+```bash
+# 1. Fork the project
+# 2. Create a branch
+git checkout -b feature/amazing-feature
+
+# 3. Commit
+git commit -m "feat: add amazing feature"
+
+# 4. Push
+git push origin feature/amazing-feature
+
+# 5. Open a Pull Request
+```
+
+---
+
+## 🙏 Acknowledgments
+
+- [Redis](https://redis.io/) - In-memory data store
+- [Upstash](https://upstash.com/) - Serverless Redis
+- [Express.js](https://expressjs.com/) - Web framework
+- [ioredis](https://github.com/redis/ioredis) - Redis client
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⭐ Show Your Support
+
+If this project helped you, please give it a ⭐ on GitHub!
+
+---
+
+<p align="center">
+  Made with 💜 by <a href="https://github.com/Lucas3133">Lucas</a>
+</p>

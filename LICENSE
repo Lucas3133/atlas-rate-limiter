@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 Atlas Rate Limiter Team
+Copyright (c) 2025 Atlas Shield Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,23 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## 🤝 Contributions Welcome!
+
+We welcome contributions from the community! Whether you're fixing bugs, 
+improving documentation, or suggesting new features, your help is appreciated.
+
+Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to 
+contribute to this project.
+
+### Ways to Contribute
+
+- 🐛 **Report Bugs**: Open an issue describing the bug
+- 💡 **Suggest Features**: Share your ideas for improvements
+- 📝 **Improve Documentation**: Help make the docs clearer
+- 🔧 **Submit Pull Requests**: Fix bugs or add features
+- ⭐ **Star the Project**: Show your support!
+
+Thank you for helping make Atlas Rate Limiter better! 💜

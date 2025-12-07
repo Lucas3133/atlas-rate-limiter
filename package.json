@@ -1,7 +1,7 @@
 {
     "name": "atlas-rate-limiter",
     "version": "1.0.0-beta",
-    "description": "Sistema de Rate Limiting distribuído com Token Bucket Algorithm",
+    "description": "High-performance distributed rate limiter using Redis + Token Bucket Algorithm. Protect your APIs against abuse and DDoS attacks.",
     "main": "src/index.js",
     "scripts": {
         "start": "node src/index.js",
@@ -15,13 +15,31 @@
     },
     "keywords": [
         "rate-limiter",
+        "rate-limiting",
         "token-bucket",
         "redis",
         "middleware",
-        "distributed"
+        "distributed",
+        "express",
+        "api-protection",
+        "ddos-protection",
+        "security",
+        "prometheus",
+        "metrics"
     ],
-    "author": "",
+    "author": "Lucas <lucas@atlasshield.dev>",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Lucas3133/atlas-rate-limiter.git"
+    },
+    "bugs": {
+        "url": "https://github.com/Lucas3133/atlas-rate-limiter/issues"
+    },
+    "homepage": "https://github.com/Lucas3133/atlas-rate-limiter#readme",
+    "engines": {
+        "node": ">=18.0.0"
+    },
     "dependencies": {
         "express": "^4.18.2",
         "ioredis": "^5.3.2",

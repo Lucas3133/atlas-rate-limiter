@@ -1,5 +1,5 @@
 // ================================================================
-// ATLAS RATE LIMITER - API DE DEMONSTRAÇÃO
+// ATLAS RATE LIMITER - DEMO API
 // ================================================================
 
 const express = require('express');
@@ -9,19 +9,19 @@ const config = require('./config');
 const logger = require('./utils/logger');
 
 // ============================================================
-// IMP-001: CONSTANTES DE RATE LIMIT (evita magic numbers)
+// IMP-001: RATE LIMIT CONSTANTS (avoids magic numbers)
 // ============================================================
 const RATE_LIMITS = {
-    LOGIN: { capacity: 5, refillRate: 1 },        // Login: 5 tentativas/5s
+    LOGIN: { capacity: 5, refillRate: 1 },        // Login: 5 attempts/5s
     ADMIN: { capacity: 1000, refillRate: 100 },   // Admin: 1000 req/10s
     METRICS: { capacity: 50, refillRate: 5 },     // Metrics: 50 req/10s
     STATIC: { capacity: 500, refillRate: 50 },    // Static: 500 req/10s
-    PUBLIC: null                                   // Public: usa padrão do config
+    PUBLIC: null                                   // Public: uses default config
 };
 
 const app = express();
 
-// FIX-002: Trust Proxy configurável via TRUST_PROXY no .env
+// FIX-002: Configurable Trust Proxy via TRUST_PROXY in .env
 app.set('trust proxy', config.security.trustProxy);
 
 // ============================================================
@@ -30,17 +30,17 @@ app.set('trust proxy', config.security.trustProxy);
 app.use(express.json());
 
 // ============================================================
-// BUG-004 FIX: PROTEÇÃO DE ARQUIVOS ESTÁTICOS
+// BUG-004 FIX: STATIC FILE PROTECTION
 // ============================================================
-// Antes: arquivos em /public sem proteção (vulnerável a DDoS)
-// Agora: rate limit generoso (500 req/50s = 10 req/s)
-// Não afeta usuários normais, mas previne ataques volumétricos
+// Before: files in /public without protection (vulnerable to DDoS)
+// Now: generous rate limit (500 req/50s = 10 req/s)
+// Doesn't affect normal users, but prevents volumetric attacks
 // ============================================================
 app.use('/public', rateLimiter(RATE_LIMITS.STATIC));
 app.use(express.static('public'));
 
 // ============================================================
-// IMP-002: Logger estruturado de TODAS as requisições
+// IMP-002: Structured logger for ALL requests
 // ============================================================
 app.use((req, res, next) => {
     logger.debug({
@@ -53,10 +53,10 @@ app.use((req, res, next) => {
 });
 
 // ============================================================
-// ROTAS
+// ROUTES
 // ============================================================
 
-// Health check (sem rate limit)
+// Health check (no rate limit)
 app.get('/health', async (req, res) => {
     const redisHealthy = await healthCheck();
 
@@ -70,7 +70,7 @@ app.get('/health', async (req, res) => {
     });
 });
 
-// FEAT-001: Prometheus Metrics (BUG-001 FIX: COM rate limit para prevenir DDoS)
+// FEAT-001: Prometheus Metrics (BUG-001 FIX: WITH rate limit to prevent DDoS)
 app.get('/metrics', rateLimiter(RATE_LIMITS.METRICS), (req, res) => {
     const metrics = require('./utils/metrics');
     res.setHeader('Content-Type', 'text/plain; version=0.0.4');
@@ -78,54 +78,54 @@ app.get('/metrics', rateLimiter(RATE_LIMITS.METRICS), (req, res) => {
 });
 
 
-// Rota pública (COM rate limit padrão)
+// Public route (WITH default rate limit)
 app.get('/api/public', rateLimiter(), (req, res) => {
     res.json({
-        message: 'Rota pública com rate limit padrão',
+        message: 'Public route with default rate limit',
         timestamp: new Date().toISOString()
     });
 });
 
-// Rota de login (rate limit RESTRITIVO)
+// Login route (RESTRICTIVE rate limit)
 app.post('/api/login', rateLimiter(RATE_LIMITS.LOGIN), (req, res) => {
     res.json({
-        message: 'Login simulado (5 tentativas por 5 segundos)',
-        note: 'Em produção, aqui verificaria credenciais'
+        message: 'Simulated login (5 attempts per 5 seconds)',
+        note: 'In production, this would verify credentials'
     });
 });
 
-// Rota de TESTE de login (GET pra testar fácil no navegador!)
+// Login TEST route (GET for easy browser testing!)
 app.get('/api/login-test', rateLimiter(RATE_LIMITS.LOGIN), (req, res) => {
     res.json({
-        message: '🧪 Teste de Rate Limit - Login',
-        limit: '5 requisições a cada 5 segundos',
-        tip: 'Aperte F5 umas 10x RÁPIDO pra ver bloqueio!',
+        message: '🧪 Rate Limit Test - Login',
+        limit: '5 requests per 5 seconds',
+        tip: 'Press F5 about 10x FAST to see blocking!',
         timestamp: new Date().toISOString()
     });
 });
 
-// Rota administrativa (rate limit PERMISSIVO)
+// Admin route (PERMISSIVE rate limit)
 app.get('/api/admin', rateLimiter(RATE_LIMITS.ADMIN), (req, res) => {
     res.json({
-        message: 'Rota admin com rate limit alto',
+        message: 'Admin route with high rate limit',
         timestamp: new Date().toISOString()
     });
 });
 
-// BUG-002 FIX: Rota SEM rate limit (APENAS EM DESENVOLVIMENTO)
-// ⚠️ SEGURANÇA: Esta rota só existe em dev para testes
-// Em produção, bypassaria toda a proteção do rate limiter
+// BUG-002 FIX: Route WITHOUT rate limit (DEVELOPMENT ONLY)
+// ⚠️ SECURITY: This route only exists in dev for testing
+// In production, it would bypass all rate limiter protection
 if (config.env === 'development') {
     app.get('/api/no-limit', (req, res) => {
         res.json({
-            message: 'Esta rota NÃO tem rate limit aplicado',
-            warning: 'Disponível APENAS em ambiente de desenvolvimento',
+            message: 'This route has NO rate limit applied',
+            warning: 'Available ONLY in development environment',
             environment: config.env
         });
     });
 }
 
-// Rota 404
+// 404 route
 app.use((req, res) => {
     res.status(404).json({
         error: 'Not Found',
@@ -134,12 +134,12 @@ app.use((req, res) => {
 });
 
 // ============================================================
-// INICIALIZAÇÃO
+// INITIALIZATION
 // ============================================================
 app.listen(config.port, () => {
     logger.info({
         event_type: 'server_started',
-        message: `🛡️ Atlas Rate Limiter rodando!`,
+        message: `🛡️ Atlas Rate Limiter running!`,
         port: config.port,
         environment: config.env
     });
@@ -149,18 +149,18 @@ app.listen(config.port, () => {
     console.log('🛡️  ATLAS RATE LIMITER (SHIELD)');
     console.log('========================================');
     console.log(`📍 URL: http://localhost:${config.port}`);
-    console.log(`🌍 Ambiente: ${config.env}`);
+    console.log(`🌍 Environment: ${config.env}`);
     console.log(`🔒 Trust Proxy: ${config.security.trustProxy}`);
-    console.log(`⚡ Token Bucket: ${config.rateLimit.capacity} fichas @ ${config.rateLimit.refillRate}/s`);
+    console.log(`⚡ Token Bucket: ${config.rateLimit.capacity} tokens @ ${config.rateLimit.refillRate}/s`);
     console.log('========================================');
     console.log('');
-    console.log('📡 Endpoints disponíveis:');
+    console.log('📡 Available Endpoints:');
     console.log('  GET    /health              (Health check)');
     console.log('  GET    /metrics             (Prometheus metrics)');
     console.log('  GET    /api/public          (Rate limit: 100 req/10s)');
     console.log('  POST   /api/login           (Rate limit: 5 req/5s)');
     console.log('  GET    /api/admin           (Rate limit: 1000 req/10s)');
-    console.log('  GET    /api/no-limit        (Sem rate limit)');
+    console.log('  GET    /api/no-limit        (No rate limit)');
     console.log('========================================');
     console.log('');
 });

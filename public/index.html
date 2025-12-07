@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Atlas Rate Limiter - Dashboard de monitoramento em tempo real">
+    <meta name="description" content="Atlas Rate Limiter - Real-time monitoring dashboard">
     <title>🛡️ Atlas Rate Limiter</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -748,10 +748,10 @@
         <header class="header">
             <div class="logo">🛡️</div>
             <h1>Atlas Shield</h1>
-            <p class="subtitle">Rate Limiter Distribuído • Token Bucket Algorithm</p>
+            <p class="subtitle">Distributed Rate Limiter • Token Bucket Algorithm</p>
             <div class="status-badge">
                 <span class="status-dot"></span>
-                <span id="systemStatus">Sistema Online</span>
+                <span id="systemStatus">System Online</span>
             </div>
         </header>
 
@@ -760,12 +760,12 @@
             <div class="stat-card">
                 <div class="stat-icon">🪙</div>
                 <div class="stat-value">100</div>
-                <div class="stat-label">Fichas Padrão</div>
+                <div class="stat-label">Default Tokens</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">⚡</div>
                 <div class="stat-value success">1/s</div>
-                <div class="stat-label">Taxa Recarga</div>
+                <div class="stat-label">Refill Rate</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">🔗</div>
@@ -775,7 +775,7 @@
             <div class="stat-card">
                 <div class="stat-icon">⏱️</div>
                 <div class="stat-value warning" id="latency">-</div>
-                <div class="stat-label">Latência P95</div>
+                <div class="stat-label">Latency P95</div>
             </div>
         </div>
 
@@ -783,7 +783,7 @@
         <section class="live-section">
             <div class="live-header">
                 <div class="live-title">
-                    📊 Métricas em Tempo Real
+                    📊 Real-Time Metrics
                 </div>
                 <div class="live-indicator">
                     <span class="live-dot"></span>
@@ -793,28 +793,28 @@
             <div class="counters">
                 <div class="counter allowed">
                     <div class="counter-value" id="allowedCount">0</div>
-                    <div class="counter-label">Requisições Permitidas</div>
+                    <div class="counter-label">Allowed Requests</div>
                 </div>
                 <div class="counter blocked">
                     <div class="counter-value" id="blockedCount">0</div>
-                    <div class="counter-label">Requisições Bloqueadas</div>
+                    <div class="counter-label">Blocked Requests</div>
                 </div>
                 <div class="counter rate">
                     <div class="counter-value" id="blockRate">0%</div>
-                    <div class="counter-label">Taxa de Bloqueio</div>
+                    <div class="counter-label">Block Rate</div>
                 </div>
             </div>
         </section>
 
         <!-- Endpoints -->
         <section class="endpoints-section">
-            <h2 class="section-title">📡 Endpoints Disponíveis</h2>
+            <h2 class="section-title">📡 Available Endpoints</h2>
 
             <div class="endpoint" onclick="testEndpoint('/health')">
                 <span class="method get">GET</span>
                 <div class="endpoint-info">
                     <div class="endpoint-path">/health</div>
-                    <div class="endpoint-desc">Health check do sistema</div>
+                    <div class="endpoint-desc">System health check</div>
                 </div>
                 <span class="endpoint-arrow">→</span>
             </div>
@@ -823,7 +823,7 @@
                 <span class="method get">GET</span>
                 <div class="endpoint-info">
                     <div class="endpoint-path">/metrics</div>
-                    <div class="endpoint-desc">Métricas Prometheus</div>
+                    <div class="endpoint-desc">Prometheus Metrics</div>
                 </div>
                 <span class="endpoint-arrow">→</span>
             </div>
@@ -841,7 +841,7 @@
                 <span class="method get">GET</span>
                 <div class="endpoint-info">
                     <div class="endpoint-path">/api/login-test</div>
-                    <div class="endpoint-desc">Rate limit: 5 req / 5s - Aperte F5 10x pra testar!</div>
+                    <div class="endpoint-desc">Rate limit: 5 req / 5s - Press F5 10x to test!</div>
                 </div>
                 <span class="endpoint-arrow">→</span>
             </div>
@@ -850,7 +850,7 @@
                 <span class="method get">GET</span>
                 <div class="endpoint-info">
                     <div class="endpoint-path">/api/admin</div>
-                    <div class="endpoint-desc">Rate limit: 1000 req / 10s (permissivo)</div>
+                    <div class="endpoint-desc">Rate limit: 1000 req / 10s (permissive)</div>
                 </div>
                 <span class="endpoint-arrow">→</span>
             </div>
@@ -859,13 +859,13 @@
         <!-- Action Buttons -->
         <div class="actions">
             <button class="btn btn-primary" onclick="runQuickTest()">
-                ⚡ Teste Rápido
+                ⚡ Quick Test
             </button>
             <button class="btn btn-danger" onclick="runStressTest()">
                 🔥 Stress Test (50 req)
             </button>
             <button class="btn btn-outline" onclick="refreshMetrics()">
-                🔄 Atualizar Métricas
+                🔄 Refresh Metrics
             </button>
         </div>
 
@@ -885,7 +885,7 @@
     <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
         <div class="modal" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3 class="modal-title" id="modalTitle">Resposta</h3>
+                <h3 class="modal-title" id="modalTitle">Response</h3>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div id="modalContent"></div>
@@ -932,7 +932,7 @@
                 const healthRes = await fetch('/health');
                 const health = await healthRes.json();
                 document.getElementById('redisStatus').textContent = health.services?.redis === 'healthy' ? 'OK' : 'ERROR';
-                document.getElementById('systemStatus').textContent = health.status === 'ok' ? 'Sistema Online' : 'Degradado';
+                document.getElementById('systemStatus').textContent = health.status === 'ok' ? 'System Online' : 'Degraded';
 
             } catch (error) {
                 console.error('Error fetching metrics:', error);
@@ -953,7 +953,7 @@
 
         // Test single endpoint
         async function testEndpoint(path, method = 'GET') {
-            showModal('Testando...', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div></div>');
+            showModal('Testing...', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div></div>');
 
             try {
                 const start = Date.now();
@@ -982,7 +982,7 @@
                             <span class="detail-value">${method} ${path}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Latência</span>
+                            <span class="detail-label">Latency</span>
                             <span class="detail-value">${latency}ms</span>
                         </div>
                         <div class="detail-row">
@@ -990,7 +990,7 @@
                             <span class="detail-value">${response.headers.get('X-RateLimit-Limit') || 'N/A'}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Restante</span>
+                            <span class="detail-label">Remaining</span>
                             <span class="detail-value">${response.headers.get('X-RateLimit-Remaining') || 'N/A'}</span>
                         </div>
                         <div class="detail-row">
@@ -999,22 +999,22 @@
                         </div>
                     </div>
                     <details style="margin-top:15px">
-                        <summary style="cursor:pointer;color:rgba(255,255,255,0.6)">Ver resposta completa</summary>
+                        <summary style="cursor:pointer;color:rgba(255,255,255,0.6)">View full response</summary>
                         <pre style="background:rgba(0,0,0,0.4);padding:15px;border-radius:10px;margin-top:10px;overflow:auto;max-height:200px;font-size:0.85rem">${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}</pre>
                     </details>
                 `;
 
-                showModal(`Resposta: ${path}`, html);
+                showModal(`Response: ${path}`, html);
                 refreshMetrics();
 
             } catch (error) {
-                showModal('Erro', `<div class="response-status error">❌ ${error.message}</div>`);
+                showModal('Error', `<div class="response-status error">❌ ${error.message}</div>`);
             }
         }
 
         // Quick test
         async function runQuickTest() {
-            showModal('Teste Rápido', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div><p>Enviando 5 requisições...</p></div>');
+            showModal('Quick Test', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div><p>Sending 5 requests...</p></div>');
 
             const results = { success: 0, blocked: 0 };
 
@@ -1032,23 +1032,23 @@
                     <div style="display:flex;gap:30px;justify-content:center">
                         <div>
                             <div style="font-size:2.5rem;font-weight:800;color:var(--success)">${results.success}</div>
-                            <div style="color:rgba(255,255,255,0.5)">Permitidas</div>
+                            <div style="color:rgba(255,255,255,0.5)">Allowed</div>
                         </div>
                         <div>
                             <div style="font-size:2.5rem;font-weight:800;color:var(--danger)">${results.blocked}</div>
-                            <div style="color:rgba(255,255,255,0.5)">Bloqueadas</div>
+                            <div style="color:rgba(255,255,255,0.5)">Blocked</div>
                         </div>
                     </div>
                 </div>
             `;
 
-            showModal('Resultado do Teste', html);
+            showModal('Test Results', html);
             refreshMetrics();
         }
 
         // Stress test
         async function runStressTest() {
-            showModal('Stress Test', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div><p>Enviando 50 requisições simultâneas...</p></div>');
+            showModal('Stress Test', '<div style="text-align:center"><div class="spinner" style="margin:20px auto"></div><p>Sending 50 concurrent requests...</p></div>');
 
             const start = Date.now();
             const promises = [];
@@ -1070,11 +1070,11 @@
                     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:20px">
                         <div style="background:rgba(0,0,0,0.3);padding:20px;border-radius:12px">
                             <div style="font-size:2rem;font-weight:800;color:var(--success)">${success}</div>
-                            <div style="color:rgba(255,255,255,0.5);font-size:0.9rem">Permitidas</div>
+                            <div style="color:rgba(255,255,255,0.5);font-size:0.9rem">Allowed</div>
                         </div>
                         <div style="background:rgba(0,0,0,0.3);padding:20px;border-radius:12px">
                             <div style="font-size:2rem;font-weight:800;color:var(--danger)">${blocked}</div>
-                            <div style="color:rgba(255,255,255,0.5);font-size:0.9rem">Bloqueadas</div>
+                            <div style="color:rgba(255,255,255,0.5);font-size:0.9rem">Blocked</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:20px;justify-content:center;color:rgba(255,255,255,0.6)">
@@ -1082,12 +1082,12 @@
                         <span>📈 ${rps} req/s</span>
                     </div>
                     <p style="margin-top:20px;color:${blocked > 0 ? 'var(--success)' : 'var(--warning)'}">
-                        ${blocked > 0 ? '✅ Rate limiter funcionando!' : '⚠️ Nenhum bloqueio detectado'}
+                        ${blocked > 0 ? '✅ Rate limiter working!' : '⚠️ No blocks detected'}
                     </p>
                 </div>
             `;
 
-            showModal('Resultado do Stress Test', html);
+            showModal('Stress Test Results', html);
             refreshMetrics();
         }
 

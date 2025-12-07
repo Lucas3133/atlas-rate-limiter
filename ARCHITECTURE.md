@@ -1,162 +1,162 @@
-# 🏗️ Atlas Rate Limiter - Arquitetura Técnica
+# 🏗️ Atlas Rate Limiter - Technical Architecture
 
-## 📋 Documentação Original
+## 📋 Original Documentation
 
-Esta implementação segue fielmente a especificação técnica fornecida, implementando todos os requisitos P0 e P1.
+This implementation faithfully follows the provided technical specification, implementing all P0 and P1 requirements.
 
-## 🎯 Decisões Arquiteturais
+## 🎯 Architectural Decisions
 
 ### **1. Token Bucket Algorithm**
 
-**Por que Token Bucket e não Sliding Window?**
+**Why Token Bucket instead of Sliding Window?**
 
 ```
 Token Bucket:
-✅ Permite bursts controlados
-✅ Mais justo (recarga contínua)
-✅ Implementação atômica simples em Lua
-✅ Usado por: AWS, Cloudflare, Stripe
+✅ Allows controlled bursts
+✅ More fair (continuous refill)
+✅ Simple atomic implementation in Lua
+✅ Used by: AWS, Cloudflare, Stripe
 
 Sliding Window:
-❌ Mais complexo de implementar atomicamente
-❌ Não permite bursts
-✅ Mais preciso matematicamente
+❌ More complex to implement atomically
+❌ Doesn't allow bursts
+✅ More mathematically precise
 ```
 
-**Decisão:** Token Bucket com Lazy Refill (otimização)
+**Decision:** Token Bucket with Lazy Refill (optimization)
 
 ---
 
-### **2. Lua Script (Atomicidade)**
+### **2. Lua Script (Atomicity)**
 
-**Por que LUA e não código JavaScript?**
+**Why LUA instead of JavaScript code?**
 
 ```
 LUA Script (Redis):
-✅ Execução ATÔMICA no servidor
+✅ ATOMIC execution on server
 ✅ Zero race conditions
-✅ Performance máxima (1 round-trip)
+✅ Maximum performance (1 round-trip)
 
-JavaScript (cliente):
-❌ Múltiplas operações Redis = race condition
-❌ Vários round-trips = latência
-❌ Impossível garantir atomicidade
+JavaScript (client):
+❌ Multiple Redis operations = race condition
+❌ Multiple round-trips = latency
+❌ Impossible to guarantee atomicity
 ```
 
-**Decisão:** Toda lógica Token Bucket em Lua
+**Decision:** All Token Bucket logic in Lua
 
 ---
 
 ### **3. Fail-Open Strategy**
 
-**Por que permitir requisições quando Redis cai?**
+**Why allow requests when Redis is down?**
 
 ```
-FAIL-OPEN (permite):
-✅ Disponibilidade do negócio mantida
-✅ Rate limiter é proteção, não infraestrutura crítica
-✅ Usado por: Netflix, AWS API Gateway
+FAIL-OPEN (allows):
+✅ Business availability maintained
+✅ Rate limiter is protection, not critical infrastructure
+✅ Used by: Netflix, AWS API Gateway
 
-FAIL-CLOSED (bloqueia):
-❌ Redis down = API inteira down
-❌ Dependência crítica desnecessária
-❌ Impacto no negócio
+FAIL-CLOSED (blocks):
+❌ Redis down = entire API down
+❌ Unnecessary critical dependency
+❌ Business impact
 ```
 
-**Decisão:** Fail-Open com logs de auditoria
+**Decision:** Fail-Open with audit logs
 
 ---
 
-### **4. Identificação de Cliente**
+### **4. Client Identification**
 
-**Prioridade:** API Key > User ID > IP Address
+**Priority:** API Key > User ID > IP Address
 
 ```
 API Key:
-✅ Mais seguro
-✅ Não spoofável
-✅ Rate limit por aplicação
+✅ Most secure
+✅ Not spoofable
+✅ Rate limit per application
 
 User ID:
-✅ Seguro (de JWT)
-✅ Rate limit por usuário
-❌ Requer autenticação
+✅ Secure (from JWT)
+✅ Rate limit per user
+❌ Requires authentication
 
 IP Address:
-✅ Funciona sem auth
-❌ Spoofável (mitigado)
-❌ Problema com NAT/proxies
+✅ Works without auth
+❌ Spoofable (mitigated)
+❌ Problem with NAT/proxies
 ```
 
-**Decisão:** Sistema flexível com anti-spoofing
+**Decision:** Flexible system with anti-spoofing
 
 ---
 
-## 🔄 Fluxo de Requisição
+## 🔄 Request Flow
 
 ```
-1. Requisição chega
-   ├─> Middleware identifica cliente
-   │   └─> Prioridade: API Key > User ID > IP
+1. Request arrives
+   ├─> Middleware identifies client
+   │   └─> Priority: API Key > User ID > IP
    │
-2. Tenta conectar Redis
-   ├─> ✅ Conectado
-   │   ├─> Executa Lua script (atômico)
-   │   ├─> Calcula fichas (lazy refill)
-   │   ├─> Tenta consumir ficha
-   │   │   ├─> ✅ Tem fichas: ALLOW
-   │   │   └─> ❌ Sem fichas: 429
-   │   └─> Adiciona headers RFC
+2. Try to connect Redis
+   ├─> ✅ Connected
+   │   ├─> Execute Lua script (atomic)
+   │   ├─> Calculate tokens (lazy refill)
+   │   ├─> Try to consume token
+   │   │   ├─> ✅ Has tokens: ALLOW
+   │   │   └─> ❌ No tokens: 429
+   │   └─> Add RFC headers
    │
-   └─> ❌ Falha (erro/timeout)
-       └─> FAIL-OPEN: ALLOW + log crítico
+   └─> ❌ Failure (error/timeout)
+       └─> FAIL-OPEN: ALLOW + critical log
 ```
 
 ---
 
-## 🧮 Token Bucket - Matemática
+## 🧮 Token Bucket - Mathematics
 
-### **Fórmula Lazy Refill**
+### **Lazy Refill Formula**
 
 ```javascript
-tempo_passado = agora - ultima_recarga
-fichas_geradas = tempo_passado × taxa_recarga
+time_passed = now - last_refill
+tokens_generated = time_passed × refill_rate
 
-fichas_atuais = min(capacidade, fichas_antigas + fichas_geradas)
+current_tokens = min(capacity, old_tokens + tokens_generated)
 
-if (fichas_atuais >= custo) {
-  PERMITIR
-  fichas_atuais -= custo
+if (current_tokens >= cost) {
+  ALLOW
+  current_tokens -= cost
 } else {
-  BLOQUEAR
-  proximo_ficha_em = (custo - fichas_atuais) / taxa_recarga
+  BLOCK
+  next_token_in = (cost - current_tokens) / refill_rate
 }
 ```
 
-### **Exemplo Prático**
+### **Practical Example**
 
 ```
-Configuração:
-- Capacidade: 100 fichas
-- Recarga: 10 fichas/segundo
-- Custo: 1 ficha/requisição
+Configuration:
+- Capacity: 100 tokens
+- Refill: 10 tokens/second
+- Cost: 1 token/request
 
-Cenário:
-T=0s  → Usuário novo → 100 fichas
-T=0s  → Requisição #1 → Consome 1 → 99 fichas
-T=0s  → Requisição #2 → Consome 1 → 98 fichas
+Scenario:
+T=0s  → New user → 100 tokens
+T=0s  → Request #1 → Consumes 1 → 99 tokens
+T=0s  → Request #2 → Consumes 1 → 98 tokens
 ...
-T=0s  → Requisição #100 → Consome 1 → 0 fichas
-T=0s  → Requisição #101 → SEM FICHAS → 429 (retry em 0.1s)
+T=0s  → Request #100 → Consumes 1 → 0 tokens
+T=0s  → Request #101 → NO TOKENS → 429 (retry in 0.1s)
 
-T=5s  → Requisição #102 → Recarga 5s × 10 = 50 fichas → ALLOW
+T=5s  → Request #102 → Refill 5s × 10 = 50 tokens → ALLOW
 ```
 
 ---
 
-## 🗄️ Estrutura Redis
+## 🗄️ Redis Structure
 
-### **Formato das Chaves**
+### **Key Format**
 
 ```
 shield:apikey:abc123      → API Key
@@ -164,7 +164,7 @@ shield:user:user_456      → User ID
 shield:ip:192.168.1.100   → IP Address
 ```
 
-### **Dados Armazenados (Hash)**
+### **Stored Data (Hash)**
 
 ```redis
 HMSET shield:user:123
@@ -175,56 +175,56 @@ HMSET shield:user:123
 ### **TTL (Auto-Cleanup)**
 
 ```
-24 horas sem uso → Redis apaga automaticamente
-Economiza memória
-Não precisa job de limpeza
+24 hours without use → Redis auto-deletes
+Saves memory
+No cleanup job needed
 ```
 
 ---
 
-## 🔒 Segurança
+## 🔒 Security
 
-### **1. Anti-Spoofing de IP**
+### **1. IP Anti-Spoofing**
 
 ```javascript
 X-Forwarded-For: malicious_ip, real_proxy
 
-// ❌ Usar último IP = bypass fácil
-// ✅ Usar primeiro IP = cliente real
+// ❌ Using last IP = easy bypass
+// ✅ Using first IP = real client
 
-// Validação adicional:
-- Formato válido IPv4/IPv6
-- Não aceitar "unknown"
-- Sanitizar ::ffff: prefix
+// Additional validation:
+- Valid IPv4/IPv6 format
+- Don't accept "unknown"
+- Sanitize ::ffff: prefix
 ```
 
-### **2. Fail-Open Consciente**
+### **2. Conscious Fail-Open**
 
 ```javascript
 try {
-  // Tenta rate limit
+  // Try rate limit
 } catch (error) {
   logger.error({ critical: true });
   
-  // ⚠️ PERMITE requisição
-  // Melhor do que derrubar o sistema
-  // Mas LOGA pra investigação
+  // ⚠️ ALLOWS request
+  // Better than bringing down the system
+  // But LOGS for investigation
 }
 ```
 
-### **3. Timeout Configurado**
+### **3. Configured Timeout**
 
 ```
-Redis timeout: 2 segundos máximo
-Não pendura requisição
-Fail-open se demorar
+Redis timeout: 2 seconds max
+Doesn't hang request
+Fail-open if too slow
 ```
 
 ---
 
-## 📊 Observabilidade
+## 📊 Observability
 
-### **Logs Estruturados**
+### **Structured Logs**
 
 ```json
 {
@@ -237,7 +237,7 @@ Fail-open se demorar
 }
 ```
 
-### **Headers de Resposta**
+### **Response Headers**
 
 ```http
 X-RateLimit-Limit: 100
@@ -248,46 +248,46 @@ Retry-After: 3
 
 ---
 
-## 🎯 Requisitos Implementados
+## 🎯 Implemented Requirements
 
 ### **P0 - CRITICAL** ✅
 
-- [x] **INFRA-001**: Conexão resiliente Redis
+- [x] **INFRA-001**: Resilient Redis connection
 - [x] **CORE-001**: Token Bucket via Lua
 
 ### **P1 - REQUIRED** ✅
 
 - [x] **SEC-001**: Fail-Open strategy
-- [x] **API-001**: Headers RFC-compliant
-- [x] **SEC-002**: Identificação segura (anti-spoofing)
+- [x] **API-001**: RFC-compliant headers
+- [x] **SEC-002**: Secure identification (anti-spoofing)
 
 ### **P2 - ENHANCEMENT** ✅
 
-- [x] **OPS-001**: Logs de auditoria JSON
+- [x] **OPS-001**: JSON audit logs
 
 ---
 
 ## 🚀 Performance
 
-### **Latência**
+### **Latency**
 
 ```
-Redis local: ~1-2ms
-Redis Upstash: ~10-50ms (dependendo região)
-Timeout máximo: 2000ms (configurável)
+Local Redis: ~1-2ms
+Upstash Redis: ~10-50ms (depending on region)
+Max timeout: 2000ms (configurable)
 ```
 
 ### **Throughput**
 
 ```
-Redis suporta: ~100k ops/s
-Lua script: 1 operação = 1 decisão
-Sem gargalo no rate limiter
+Redis supports: ~100k ops/s
+Lua script: 1 operation = 1 decision
+No bottleneck in rate limiter
 ```
 
 ---
 
-## 📚 Referências
+## 📚 References
 
 - [Token Bucket - Wikipedia](https://en.wikipedia.org/wiki/Token_bucket)
 - [RFC 6585 - 429 Status Code](https://tools.ietf.org/html/rfc6585)

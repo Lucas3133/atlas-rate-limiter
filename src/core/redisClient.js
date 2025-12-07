@@ -1,7 +1,7 @@
 // ================================================================
-// ATLAS RATE LIMITER - CONEXÃO REDIS RESILIENTE
+// ATLAS RATE LIMITER - RESILIENT REDIS CONNECTION
 // ================================================================
-// INFRA-001: Conexão TCP/TLS com Upstash usando ioredis
+// INFRA-001: TCP/TLS connection with Upstash using ioredis
 // ================================================================
 
 const Redis = require('ioredis');
@@ -11,10 +11,10 @@ const logger = require('../utils/logger');
 let redisClient = null;
 
 /**
- * Cria conexão resiliente com Redis (Upstash)
- * - Timeout configurado (não pendura a API)
- * - Tratamento silencioso de erros (Fail-Open)
- * - Reconnect automático
+ * Creates resilient Redis connection (Upstash)
+ * - Configured timeout (doesn't hang the API)
+ * - Silent error handling (Fail-Open)
+ * - Automatic reconnect
  */
 function createRedisClient() {
     if (redisClient) {
@@ -24,29 +24,29 @@ function createRedisClient() {
     try {
         redisClient = new Redis(config.redis.url, {
             // ============================================================
-            // RESILIÊNCIA
+            // RESILIENCE
             // ============================================================
             connectTimeout: config.redis.timeoutMs,
             commandTimeout: config.redis.timeoutMs,
 
-            // BUG-003 FIX: Retry strategy melhorado
-            // Antes: desistia após 3 tentativas (6s)
-            // Agora: tenta por até 60x com backoff até 10s
-            // Cenário: Se Redis cair por 1-2min, consegue reconectar automaticamente
+            // BUG-003 FIX: Improved retry strategy
+            // Before: gave up after 3 attempts (6s)
+            // Now: tries up to 60x with backoff up to 10s
+            // Scenario: If Redis is down for 1-2min, can reconnect automatically
             retryStrategy: (times) => {
                 if (times > 60) {
                     logger.error({
                         event_type: 'redis_connection_failed',
-                        message: 'Redis desistindo de reconectar após 60 tentativas (~10 minutos)'
+                        message: 'Redis giving up reconnection after 60 attempts (~10 minutes)'
                     });
-                    return null; // Para de tentar
+                    return null; // Stop trying
                 }
-                // Backoff exponencial com limite de 10s
+                // Exponential backoff with 10s limit
                 return Math.min(times * 1000, 10000);
             },
 
             // ============================================================
-            // SEGURANÇA
+            // SECURITY
             // ============================================================
             tls: config.redis.url.startsWith('rediss://') ? {} : undefined,
 
@@ -55,31 +55,31 @@ function createRedisClient() {
             // ============================================================
             enableReadyCheck: false,
             maxRetriesPerRequest: 1,
-            lazyConnect: false, // Conecta imediatamente
+            lazyConnect: false, // Connect immediately
         });
 
         // ============================================================
-        // EVENT LISTENERS (Observabilidade)
+        // EVENT LISTENERS (Observability)
         // ============================================================
 
         redisClient.on('connect', () => {
             console.log('\n✅ ========================================');
-            console.log('✅ REDIS CONECTADO COM SUCESSO!');
-            console.log('✅ Rate limiting ATIVO!');
+            console.log('✅ REDIS CONNECTED SUCCESSFULLY!');
+            console.log('✅ Rate limiting ACTIVE!');
             console.log('✅ ========================================\n');
 
             logger.info({
                 event_type: 'redis_connected',
-                message: 'Conexão estabelecida com Redis (Upstash)'
+                message: 'Connection established with Redis (Upstash)'
             });
         });
 
         redisClient.on('error', (err) => {
             console.log('\n❌ ========================================');
-            console.log('❌ ERRO AO CONECTAR REDIS!');
-            console.log('❌ Motivo:', err.message);
-            console.log('❌ Sistema rodando em FAIL-OPEN mode');
-            console.log('❌ (Requisições permitidas sem rate limit)');
+            console.log('❌ REDIS CONNECTION ERROR!');
+            console.log('❌ Reason:', err.message);
+            console.log('❌ System running in FAIL-OPEN mode');
+            console.log('❌ (Requests allowed without rate limit)');
             console.log('❌ ========================================\n');
 
             logger.error({
@@ -92,7 +92,7 @@ function createRedisClient() {
         redisClient.on('close', () => {
             logger.warn({
                 event_type: 'redis_connection_closed',
-                message: 'Conexão com Redis foi fechada'
+                message: 'Redis connection was closed'
             });
         });
 
@@ -104,13 +104,13 @@ function createRedisClient() {
             message: error.message
         });
 
-        // Retorna null - Fail-Open vai permitir requisições
+        // Return null - Fail-Open will allow requests
         return null;
     }
 }
 
 /**
- * Testa se conexão Redis está saudável
+ * Tests if Redis connection is healthy
  */
 async function healthCheck() {
     try {
@@ -125,7 +125,7 @@ async function healthCheck() {
 }
 
 /**
- * Retorna cliente Redis (singleton)
+ * Returns Redis client (singleton)
  */
 function getRedisClient() {
     if (!redisClient) {
@@ -135,7 +135,7 @@ function getRedisClient() {
 }
 
 /**
- * Fecha conexão (para testes/shutdown gracioso)
+ * Closes connection (for tests/graceful shutdown)
  */
 async function closeRedisConnection() {
     if (redisClient) {

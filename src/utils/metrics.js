@@ -1,74 +1,74 @@
 // ================================================================
 // ATLAS RATE LIMITER - PROMETHEUS METRICS
 // ================================================================
-// FEAT-001: Métricas para Grafana/Prometheus
+// FEAT-001: Metrics for Grafana/Prometheus
 // ================================================================
 
 class PrometheusMetrics {
     constructor() {
-        // Counters (valores que só incrementam)
+        // Counters (values that only increment)
         this.requestsAllowed = 0;
         this.requestsBlocked = 0;
         this.redisErrors = 0;
         this.failOpenEvents = 0;
 
-        // Gauges (valores que podem subir/descer)
+        // Gauges (values that can go up/down)
         this.activeClients = new Set();
 
-        // Histograms (registra últimos valores)
+        // Histograms (records last values)
         this.responseTimesMs = [];
-        this.maxHistorySize = 1000; // Manter últimas 1000 medições
+        this.maxHistorySize = 1000; // Keep last 1000 measurements
     }
 
     /**
-     * Incrementa contador de requisições permitidas
+     * Increments allowed requests counter
      */
     incrementAllowed() {
         this.requestsAllowed++;
     }
 
     /**
-     * Incrementa contador de requisições bloqueadas
+     * Increments blocked requests counter
      */
     incrementBlocked() {
         this.requestsBlocked++;
     }
 
     /**
-     * Incrementa contador de erros do Redis
+     * Increments Redis error counter
      */
     incrementRedisError() {
         this.redisErrors++;
     }
 
     /**
-     * Incrementa contador de eventos fail-open
+     * Increments fail-open events counter
      */
     incrementFailOpen() {
         this.failOpenEvents++;
     }
 
     /**
-     * Registra tempo de resposta
+     * Records response time
      */
     recordResponseTime(timeMs) {
         this.responseTimesMs.push(timeMs);
 
-        // Manter apenas últimas N medições
+        // Keep only last N measurements
         if (this.responseTimesMs.length > this.maxHistorySize) {
             this.responseTimesMs.shift();
         }
     }
 
     /**
-     * Rastreia cliente ativo
+     * Tracks active client
      */
     trackClient(clientId) {
         this.activeClients.add(clientId);
     }
 
     /**
-     * Calcula percentil de um array de números
+     * Calculates percentile of a number array
      */
     percentile(arr, p) {
         if (arr.length === 0) return 0;
@@ -78,7 +78,7 @@ class PrometheusMetrics {
     }
 
     /**
-     * Gera métricas no formato Prometheus
+     * Generates metrics in Prometheus format
      */
     toPrometheus() {
         const lines = [];
@@ -86,22 +86,22 @@ class PrometheusMetrics {
         // ============================================================
         // COUNTERS
         // ============================================================
-        lines.push('# HELP atlas_requests_allowed_total Total de requisições permitidas');
+        lines.push('# HELP atlas_requests_allowed_total Total allowed requests');
         lines.push('# TYPE atlas_requests_allowed_total counter');
         lines.push(`atlas_requests_allowed_total ${this.requestsAllowed}`);
         lines.push('');
 
-        lines.push('# HELP atlas_requests_blocked_total Total de requisições bloqueadas (429)');
+        lines.push('# HELP atlas_requests_blocked_total Total blocked requests (429)');
         lines.push('# TYPE atlas_requests_blocked_total counter');
         lines.push(`atlas_requests_blocked_total ${this.requestsBlocked}`);
         lines.push('');
 
-        lines.push('# HELP atlas_redis_errors_total Total de erros de conexão Redis');
+        lines.push('# HELP atlas_redis_errors_total Total Redis connection errors');
         lines.push('# TYPE atlas_redis_errors_total counter');
         lines.push(`atlas_redis_errors_total ${this.redisErrors}`);
         lines.push('');
 
-        lines.push('# HELP atlas_fail_open_events_total Total de eventos fail-open (permitiu por erro)');
+        lines.push('# HELP atlas_fail_open_events_total Total fail-open events (allowed due to error)');
         lines.push('# TYPE atlas_fail_open_events_total counter');
         lines.push(`atlas_fail_open_events_total ${this.failOpenEvents}`);
         lines.push('');
@@ -109,18 +109,18 @@ class PrometheusMetrics {
         // ============================================================
         // GAUGES
         // ============================================================
-        lines.push('# HELP atlas_active_clients Número de clientes únicos ativos');
+        lines.push('# HELP atlas_active_clients Number of unique active clients');
         lines.push('# TYPE atlas_active_clients gauge');
         lines.push(`atlas_active_clients ${this.activeClients.size}`);
         lines.push('');
 
-        // Taxa de bloqueio (%)
+        // Block rate (%)
         const totalRequests = this.requestsAllowed + this.requestsBlocked;
         const blockRate = totalRequests > 0
             ? ((this.requestsBlocked / totalRequests) * 100).toFixed(2)
             : 0;
 
-        lines.push('# HELP atlas_block_rate_percent Porcentagem de requisições bloqueadas');
+        lines.push('# HELP atlas_block_rate_percent Percentage of blocked requests');
         lines.push('# TYPE atlas_block_rate_percent gauge');
         lines.push(`atlas_block_rate_percent ${blockRate}`);
         lines.push('');
@@ -133,7 +133,7 @@ class PrometheusMetrics {
             const p95 = this.percentile(this.responseTimesMs, 95);
             const p99 = this.percentile(this.responseTimesMs, 99);
 
-            lines.push('# HELP atlas_response_time_ms Tempo de resposta do rate limiter');
+            lines.push('# HELP atlas_response_time_ms Rate limiter response time');
             lines.push('# TYPE atlas_response_time_ms summary');
             lines.push(`atlas_response_time_ms{quantile="0.5"} ${p50.toFixed(2)}`);
             lines.push(`atlas_response_time_ms{quantile="0.95"} ${p95.toFixed(2)}`);
@@ -145,7 +145,7 @@ class PrometheusMetrics {
         // ============================================================
         // METADATA
         // ============================================================
-        lines.push('# HELP atlas_info Informações do Atlas Rate Limiter');
+        lines.push('# HELP atlas_info Atlas Rate Limiter information');
         lines.push('# TYPE atlas_info gauge');
         lines.push(`atlas_info{version="1.0.0-beta",arch="distributed"} 1`);
 
@@ -153,7 +153,7 @@ class PrometheusMetrics {
     }
 
     /**
-     * Reseta métricas (útil para testes)
+     * Resets metrics (useful for tests)
      */
     reset() {
         this.requestsAllowed = 0;
@@ -165,7 +165,7 @@ class PrometheusMetrics {
     }
 }
 
-// Singleton global
+// Global singleton
 const metrics = new PrometheusMetrics();
 
 module.exports = metrics;

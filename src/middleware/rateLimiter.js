@@ -1,7 +1,7 @@
 // ================================================================
-// ATLAS RATE LIMITER - MIDDLEWARE EXPRESS
+// ATLAS RATE LIMITER - EXPRESS MIDDLEWARE
 // ================================================================
-// Integração de todos os componentes
+// Integration of all components
 // ================================================================
 
 const fs = require('fs');
@@ -12,17 +12,17 @@ const logger = require('../utils/logger');
 const metrics = require('../utils/metrics'); // FEAT-001
 const config = require('../config');
 
-// PERF-001: Script Lua carregado uma vez (EVALSHA otimiza banda)
+// PERF-001: Lua script loaded once (EVALSHA optimizes bandwidth)
 const luaScriptPath = path.join(__dirname, '../core/tokenBucket.lua');
 const luaScript = fs.readFileSync(luaScriptPath, 'utf8');
 let isScriptDefined = false;
 
 /**
- * Middleware de Rate Limiting
+ * Rate Limiting Middleware
  * 
- * @param {object} options - Configurações opcionais
- * @param {number} options.capacity - Capacidade do balde (override)
- * @param {number} options.refillRate - Taxa de recarga (override)
+ * @param {object} options - Optional configurations
+ * @param {number} options.capacity - Bucket capacity (override)
+ * @param {number} options.refillRate - Refill rate (override)
  * @returns {Function} Express middleware
  */
 function rateLimiter(options = {}) {
@@ -31,9 +31,9 @@ function rateLimiter(options = {}) {
     const cost = options.cost || config.rateLimit.cost;
 
     // ============================================================
-    // FIX-003: VALIDAÇÃO RÍGIDA DE INPUTS
+    // FIX-003: STRICT INPUT VALIDATION
     // ============================================================
-    // Previne crashes no Lua script com valores inválidos
+    // Prevents crashes in Lua script with invalid values
 
     if (typeof capacity !== 'number' || capacity <= 0 || !Number.isFinite(capacity)) {
         throw new Error(`[Atlas Shield] Invalid capacity: ${capacity}. Must be positive number.`);
@@ -47,28 +47,28 @@ function rateLimiter(options = {}) {
         throw new Error(`[Atlas Shield] Invalid cost: ${cost}. Must be positive number.`);
     }
 
-    // Validação adicional: capacity deve ser >= cost
+    // Additional validation: capacity must be >= cost
     if (capacity < cost) {
         throw new Error(`[Atlas Shield] Capacity (${capacity}) must be >= cost (${cost})`);
     }
 
     return async (req, res, next) => {
-        const startTime = Date.now(); // FEAT-001: Medir latência
+        const startTime = Date.now(); // FEAT-001: Measure latency
         try {
             // ============================================================
-            // 1. IDENTIFICAR CLIENTE
+            // 1. IDENTIFY CLIENT
             // ============================================================
             const clientId = identifyClient(req);
             const redisKey = `${config.rateLimit.keyPrefix}${clientId}`;
             metrics.trackClient(clientId); // FEAT-001
 
             // ============================================================
-            // 2. OBTER CLIENTE REDIS
+            // 2. GET REDIS CLIENT
             // ============================================================
             const redis = getRedisClient();
 
             // SEC-001: FAIL-OPEN
-            // Se Redis indisponível, permite requisição
+            // If Redis unavailable, allow request
             if (!redis) {
                 logger.warn({
                     event_type: 'rate_limit_fail_open',
@@ -81,11 +81,11 @@ function rateLimiter(options = {}) {
             }
 
             // ============================================================
-            // PERF-001: DEFINIR COMANDO CUSTOMIZADO (uma vez)
+            // PERF-001: DEFINE CUSTOM COMMAND (once)
             // ============================================================
-            // defineCommand registra o script no Redis e usa EVALSHA
-            // automaticamente. Economiza banda enviando só SHA ao invés
-            // do script inteiro em cada request.
+            // defineCommand registers the script in Redis and uses EVALSHA
+            // automatically. Saves bandwidth by sending only SHA instead
+            // of the entire script on each request.
 
             if (!isScriptDefined) {
                 redis.defineCommand('tokenBucket', {
@@ -96,12 +96,12 @@ function rateLimiter(options = {}) {
             }
 
             // ============================================================
-            // 3. EXECUTAR LUA SCRIPT (Token Bucket Atômico via EVALSHA)
+            // 3. EXECUTE LUA SCRIPT (Atomic Token Bucket via EVALSHA)
             // ============================================================
-            // ARCH-001: Timestamp agora vem do Redis TIME (não mais Date.now)
-            // Previne clock drift entre múltiplos servidores Node.js
+            // ARCH-001: Timestamp now comes from Redis TIME (not Date.now anymore)
+            // Prevents clock drift between multiple Node.js servers
 
-            // PERF-001: Usa comando customizado (EVALSHA internamente)
+            // PERF-001: Uses custom command (EVALSHA internally)
             const result = await redis.tokenBucket(
                 redisKey, // KEY
                 capacity, // ARGV[1]
@@ -112,28 +112,28 @@ function rateLimiter(options = {}) {
             const [allowed, remaining, resetTimestamp] = result;
 
             // ============================================================
-            // 4. ADICIONAR HEADERS RFC-COMPLIANT (API-001)
+            // 4. ADD RFC-COMPLIANT HEADERS (API-001)
             // ============================================================
             res.setHeader('X-RateLimit-Limit', capacity);
             res.setHeader('X-RateLimit-Remaining', remaining);
             res.setHeader('X-RateLimit-Reset', resetTimestamp);
 
             // ============================================================
-            // 5. DECISÃO: ALLOW ou DENY
+            // 5. DECISION: ALLOW or DENY
             // ============================================================
             if (allowed === 1) {
-                // ✅ PERMITIDO
+                // ✅ ALLOWED
                 logger.auditAllow(clientId, remaining);
                 metrics.incrementAllowed(); // FEAT-001
                 metrics.recordResponseTime(Date.now() - startTime); // FEAT-001
                 return next();
             } else {
-                // ❌ BLOQUEADO - 429 Too Many Requests
+                // ❌ BLOCKED - 429 Too Many Requests
                 logger.auditBlock(clientId, remaining);
                 metrics.incrementBlocked(); // FEAT-001
                 metrics.recordResponseTime(Date.now() - startTime); // FEAT-001
 
-                // ARCH-001: Calculate retry after usando timestamp atual
+                // ARCH-001: Calculate retry after using current timestamp
                 const now = Math.floor(Date.now() / 1000);
                 const retryAfter = Math.max(0, resetTimestamp - now);
                 res.setHeader('Retry-After', retryAfter);
@@ -150,7 +150,7 @@ function rateLimiter(options = {}) {
 
         } catch (error) {
             // ============================================================
-            // SEC-001: FAIL-OPEN EM CASO DE ERRO
+            // SEC-001: FAIL-OPEN IN CASE OF ERROR
             // ============================================================
             metrics.incrementRedisError(); // FEAT-001
             logger.error({
@@ -160,7 +160,7 @@ function rateLimiter(options = {}) {
                 action: 'ALLOW (fail-open)'
             });
 
-            // Permite requisição (availability > control)
+            // Allow request (availability > control)
             return next();
         }
     };

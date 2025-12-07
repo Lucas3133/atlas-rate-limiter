@@ -1,14 +1,14 @@
 -- ================================================================
 -- ATLAS RATE LIMITER - TOKEN BUCKET ALGORITHM (LUA SCRIPT)
 -- ================================================================
--- ARCH-001: Usa Redis TIME ao invés de Date.now() do Node.js
--- Previne inconsistências por clock drift entre servidores
+-- ARCH-001: Uses Redis TIME instead of Date.now() from Node.js
+-- Prevents inconsistencies from clock drift between servers
 -- ================================================================
 
--- KEYS[1] = Hash key do cliente (ex: "ratelimit:user_123")
--- ARGV[1] = Capacidade máxima do balde
--- ARGV[2] = Taxa de recarga (fichas por segundo)
--- ARGV[3] = Custo da requisição (geralmente 1)
+-- KEYS[1] = Client hash key (e.g., "ratelimit:user_123")
+-- ARGV[1] = Maximum bucket capacity
+-- ARGV[2] = Refill rate (tokens per second)
+-- ARGV[3] = Request cost (usually 1)
 
 local key = KEYS[1]
 local capacity = tonumber(ARGV[1])
@@ -16,72 +16,72 @@ local refill_rate = tonumber(ARGV[2])
 local cost = tonumber(ARGV[3])
 
 -- ================================================================
--- ARCH-001: OBTER TIMESTAMP DO REDIS (fonte única de verdade)
+-- ARCH-001: GET TIMESTAMP FROM REDIS (single source of truth)
 -- ================================================================
--- redis.call('TIME') retorna: { segundos, microssegundos }
--- Todos os servidores usam o mesmo relógio (Redis server)
+-- redis.call('TIME') returns: { seconds, microseconds }
+-- All servers use the same clock (Redis server)
 local time_result = redis.call('TIME')
-local now = tonumber(time_result[1])  -- Segundos desde epoch
-local now_us = tonumber(time_result[2])  -- Microssegundos
+local now = tonumber(time_result[1])  -- Seconds since epoch
+local now_us = tonumber(time_result[2])  -- Microseconds
 
--- Buscar estado atual do balde
+-- Fetch current bucket state
 local bucket = redis.call('HMGET', key, 'tokens', 'last_refill')
 local tokens = tonumber(bucket[1])
 local last_refill = tonumber(bucket[2])
 
--- Primeira requisição deste cliente (balde não existe)
+-- First request from this client (bucket doesn't exist)
 if tokens == nil then
   tokens = capacity
   last_refill = now
 end
 
 -- ================================================================
--- LAZY REFILL - Calcular fichas geradas desde última requisição
+-- LAZY REFILL - Calculate tokens generated since last request
 -- ================================================================
 local time_passed = math.max(0, now - last_refill)
 local tokens_to_add = time_passed * refill_rate
 
--- Adicionar fichas respeitando capacidade máxima
+-- Add tokens respecting maximum capacity
 tokens = math.min(capacity, tokens + tokens_to_add)
 
--- Atualizar timestamp de última recarga
+-- Update last refill timestamp
 last_refill = now
 
 -- ================================================================
--- CONSUMIR FICHA
+-- CONSUME TOKEN
 -- ================================================================
 local allowed = 0
 local remaining = tokens
 
 if tokens >= cost then
-  -- TEM FICHAS - PERMITE REQUISIÇÃO
+  -- HAS TOKENS - ALLOW REQUEST
   tokens = tokens - cost
   allowed = 1
   remaining = tokens
   
-  -- Atualizar estado no Redis
+  -- Update state in Redis
   redis.call('HMSET', key, 'tokens', tokens, 'last_refill', last_refill)
   
-  -- IMP-003: TTL dinâmico otimizado
-  -- Se usuário tem muitas fichas (>50%), é provavelmente legítimo → TTL maior (2h)
-  -- Se usuário tem poucas fichas, pode ser ataque → TTL menor (1h)
+  -- IMP-003: Optimized dynamic TTL
+  -- If user has many tokens (>50%), likely legitimate → longer TTL (2h)
+  -- If user has few tokens, may be attack → shorter TTL (1h)
   local ttl = tokens > capacity * 0.5 and 7200 or 3600
   redis.call('EXPIRE', key, ttl)
 else
-  -- SEM FICHAS - BLOQUEIA
+  -- NO TOKENS - BLOCK
   allowed = 0
-  remaining = tokens  -- Mostrar fichas reais (não 0)
+  remaining = tokens  -- Show actual tokens (not 0)
   
-  -- BUG FIX: Atualizar last_refill mesmo quando bloqueado
-  -- Previne acúmulo de fichas durante período de bloqueio
+  -- BUG FIX: Update last_refill even when blocked
+  -- Prevents token accumulation during blocking period
   redis.call('HSET', key, 'last_refill', last_refill)
   
-  -- IMP-003: Atacantes bloqueados expiram em 1h (não lotam Redis)
+  -- IMP-003: Blocked attackers expire in 1h (don't fill up Redis)
   redis.call('EXPIRE', key, 3600)
 end
 
 -- ================================================================
--- CALCULAR QUANDO TERÁ PRÓXIMA FICHA (para Retry-After header)
+-- CALCULATE WHEN NEXT TOKEN WILL BE AVAILABLE (for Retry-After header)
 -- ================================================================
 local time_until_refill = 0
 if allowed == 0 then
@@ -89,9 +89,9 @@ if allowed == 0 then
 end
 
 -- ================================================================
--- RETORNAR RESULTADO
+-- RETURN RESULT
 -- ================================================================
--- Formato: { allowed, remaining, reset_timestamp }
+-- Format: { allowed, remaining, reset_timestamp }
 return {
   allowed,
   math.floor(remaining),

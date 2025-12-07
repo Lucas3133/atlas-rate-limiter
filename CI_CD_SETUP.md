@@ -1,145 +1,145 @@
-# 🚀 Guia de CI/CD - Atlas Rate Limiter
+# 🚀 CI/CD Guide - Atlas Rate Limiter
 
-**Configuração completa de integração contínua e deploy automático no Render**
+**Complete setup for continuous integration and automatic deployment to Render**
 
 ---
 
-## 📋 Índice
+## 📋 Table of Contents
 
-1. [Configuração do Render](#1-configuração-do-render)
-2. [Configuração do GitHub Actions](#2-configuração-do-github-actions)
-3. [Fluxo de Deploy](#3-fluxo-de-deploy)
-4. [Testes e Validação](#4-testes-e-validação)
+1. [Render Configuration](#1-render-configuration)
+2. [GitHub Actions Configuration](#2-github-actions-configuration)
+3. [Deployment Flow](#3-deployment-flow)
+4. [Testing and Validation](#4-testing-and-validation)
 5. [Troubleshooting](#5-troubleshooting)
 
 ---
 
-## 1️⃣ Configuração do Render
+## 1️⃣ Render Configuration
 
-### **Passo 1: Criar Conta no Render**
+### **Step 1: Create Render Account**
 
-1. Acesse: https://render.com
-2. Clique em **"Get Started"**
-3. Conecte com sua conta **GitHub**
+1. Go to: https://render.com
+2. Click **"Get Started"**
+3. Connect with your **GitHub** account
 
-### **Passo 2: Criar Web Service**
+### **Step 2: Create Web Service**
 
-1. No dashboard do Render, clique em **"New +"** → **"Web Service"**
-2. Conecte seu repositório: `Lucas3133/atlas-rate-limiter`
-3. Configure o serviço:
+1. In the Render dashboard, click **"New +"** → **"Web Service"**
+2. Connect your repository: `Lucas3133/atlas-rate-limiter`
+3. Configure the service:
 
 ```yaml
 Name: atlas-rate-limiter
-Region: Oregon (ou mais próximo de você)
+Region: Oregon (or closest to you)
 Branch: main
 Runtime: Node
 Build Command: npm install
 Start Command: npm start
-Plan: Free (ou Starter se quiser 0 downtime)
+Plan: Free (or Starter for 0 downtime)
 ```
 
-### **Passo 3: Configurar Variáveis de Ambiente**
+### **Step 3: Configure Environment Variables**
 
-No Render Dashboard, vá em **Environment** e adicione:
+In the Render Dashboard, go to **Environment** and add:
 
 ```bash
-# ⚠️ OBRIGATÓRIAS
-UPSTASH_REDIS_URL=redis://default:SEU_TOKEN@SEU_HOST.upstash.io:6379
+# ⚠️ REQUIRED
+UPSTASH_REDIS_URL=redis://default:YOUR_TOKEN@YOUR_HOST.upstash.io:6379
 TRUST_PROXY=1
 NODE_ENV=production
 
-# ✅ OPCIONAIS (já tem valores padrão)
+# ✅ OPTIONAL (already have default values)
 PORT=3000
 RATE_LIMIT_CAPACITY=100
 RATE_LIMIT_REFILL_RATE=1
 ```
 
-### **Passo 4: Obter Deploy Hook URL**
+### **Step 4: Get Deploy Hook URL**
 
-1. No Render, vá em **Settings** → **Deploy Hook**
-2. Copie a URL (exemplo):
+1. In Render, go to **Settings** → **Deploy Hook**
+2. Copy the URL (example):
    ```
    https://api.render.com/deploy/srv-xxxxxxxxxxxxx?key=yyyyyyyyyyy
    ```
-3. **Guarde essa URL!** Vamos usar no GitHub Actions
+3. **Save this URL!** We'll use it in GitHub Actions
 
 ---
 
-## 2️⃣ Configuração do GitHub Actions
+## 2️⃣ GitHub Actions Configuration
 
-### **Passo 1: Adicionar Secret no GitHub**
+### **Step 1: Add Secret in GitHub**
 
-1. Vá no seu repositório: https://github.com/Lucas3133/atlas-rate-limiter
-2. Clique em **Settings** → **Secrets and variables** → **Actions**
-3. Clique em **"New repository secret"**
-4. Adicione:
+1. Go to your repository: https://github.com/Lucas3133/atlas-rate-limiter
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Click **"New repository secret"**
+4. Add:
    - **Name**: `RENDER_DEPLOY_HOOK_URL`
-   - **Value**: Cole a URL do Deploy Hook do Render
-5. Clique em **"Add secret"**
+   - **Value**: Paste the Deploy Hook URL from Render
+5. Click **"Add secret"**
 
-### **Passo 2: Verificar Workflows**
+### **Step 2: Verify Workflows**
 
-Verifique se os arquivos existem em `.github/workflows/`:
+Verify the files exist in `.github/workflows/`:
 
 ```bash
 ✅ ci.yml   # Continuous Integration (lint, security, docker build)
-✅ cd.yml   # Continuous Deployment (deploy automático no Render)
+✅ cd.yml   # Continuous Deployment (automatic deploy to Render)
 ```
 
 ---
 
-## 3️⃣ Fluxo de Deploy
+## 3️⃣ Deployment Flow
 
-### **Automático (Recomendado)**
+### **Automatic (Recommended)**
 
 ```bash
-# Quando você fizer push na branch main:
+# When you push to main branch:
 git add .
-git commit -m "feat: nova funcionalidade"
+git commit -m "feat: new feature"
 git push origin main
 ```
 
-**O que acontece:**
+**What happens:**
 
 ```mermaid
-1. GitHub recebe push na main
+1. GitHub receives push to main
    ↓
-2. GitHub Actions CI roda (lint, security, docker)
+2. GitHub Actions CI runs (lint, security, docker)
    ↓
-3. Se CI passar: GitHub Actions CD dispara
+3. If CI passes: GitHub Actions CD triggers
    ↓
-4. Render recebe webhook e inicia deploy
+4. Render receives webhook and starts deploy
    ↓
-5. Render faz build e deploy automático
+5. Render builds and deploys automatically
    ↓
-6. App fica disponível em: https://atlas-rate-limiter.onrender.com
+6. App available at: https://atlas-rate-limiter.onrender.com
 ```
 
-### **Manual (Emergência)**
+### **Manual (Emergency)**
 
-Se precisar fazer deploy manual:
+If you need to deploy manually:
 
 ```bash
-# Opção 1: Via GitHub Actions
-# Vá em: Actions → CD - Deploy to Render → Run workflow
+# Option 1: Via GitHub Actions
+# Go to: Actions → CD - Deploy to Render → Run workflow
 
-# Opção 2: Via Render Dashboard
-# Vá em: Manual Deploy → Deploy latest commit
+# Option 2: Via Render Dashboard
+# Go to: Manual Deploy → Deploy latest commit
 ```
 
 ---
 
-## 4️⃣ Testes e Validação
+## 4️⃣ Testing and Validation
 
-### **1. Testar Health Check**
+### **1. Test Health Check**
 
-Após deploy, verifique se o app está rodando:
+After deploy, verify the app is running:
 
 ```bash
-curl https://seu-app.onrender.com/health
+curl https://your-app.onrender.com/health
 ```
 
-Resposta esperada:
+Expected response:
 ```json
 {
   "status": "ok",
@@ -151,128 +151,128 @@ Resposta esperada:
 }
 ```
 
-### **2. Testar Rate Limiting**
+### **2. Test Rate Limiting**
 
 ```bash
-# Endpoint público (100 req/10s)
+# Public endpoint (100 req/10s)
 for i in {1..10}; do
-  curl https://seu-app.onrender.com/api/public
+  curl https://your-app.onrender.com/api/public
 done
 
 # Login (5 req/5s)
 for i in {1..6}; do
-  curl -X POST https://seu-app.onrender.com/api/login
+  curl -X POST https://your-app.onrender.com/api/login
 done
-# Último deve retornar 429
+# Last should return 429
 ```
 
-### **3. Verificar Métricas**
+### **3. Check Metrics**
 
 ```bash
-curl https://seu-app.onrender.com/metrics
+curl https://your-app.onrender.com/metrics
 ```
 
-### **4. Verificar Logs**
+### **4. Check Logs**
 
-No Render Dashboard:
-1. Clique no seu serviço
-2. Vá em **Logs**
-3. Veja em tempo real
+In Render Dashboard:
+1. Click on your service
+2. Go to **Logs**
+3. View in real-time
 
 ---
 
 ## 5️⃣ Troubleshooting
 
-### **Problema: Deploy Hook não funciona**
+### **Problem: Deploy Hook not working**
 
-**Sintomas:** Push na main não dispara deploy
+**Symptoms:** Push to main doesn't trigger deploy
 
-**Solução:**
+**Solution:**
 ```bash
-# 1. Verificar se secret está configurado
+# 1. Verify secret is configured
 # GitHub → Settings → Secrets → RENDER_DEPLOY_HOOK_URL
 
-# 2. Testar manualmente
+# 2. Test manually
 curl -X POST "https://api.render.com/deploy/srv-xxx?key=yyy"
 
-# 3. Verificar logs do GitHub Actions
-# GitHub → Actions → Verificar erro
+# 3. Check GitHub Actions logs
+# GitHub → Actions → Check error
 ```
 
 ---
 
-### **Problema: Redis connection failed**
+### **Problem: Redis connection failed**
 
-**Sintomas:** 
+**Symptoms:** 
 ```
-❌ ERRO AO CONECTAR REDIS!
-Sistema rodando em FAIL-OPEN mode
+❌ REDIS CONNECTION ERROR!
+System running in FAIL-OPEN mode
 ```
 
-**Solução:**
+**Solution:**
 ```bash
-# 1. Verificar UPSTASH_REDIS_URL no Render
-# Render → Environment → Verificar URL
+# 1. Verify UPSTASH_REDIS_URL in Render
+# Render → Environment → Check URL
 
-# 2. Formato correto:
+# 2. Correct format:
 UPSTASH_REDIS_URL=redis://default:TOKEN@HOST.upstash.io:6379
 
-# 3. Testar conexão Upstash
-# Upstash Console → CLI → PING (deve retornar PONG)
+# 3. Test Upstash connection
+# Upstash Console → CLI → PING (should return PONG)
 ```
 
 ---
 
-### **Problema: Build falha no Render**
+### **Problem: Build fails on Render**
 
-**Sintomas:** Build fica vermelho no Render
+**Symptoms:** Build shows red on Render
 
-**Solução:**
+**Solution:**
 ```bash
-# 1. Verificar logs de build no Render
-# Procurar por erros de npm install
+# 1. Check build logs on Render
+# Look for npm install errors
 
-# 2. Testar localmente
+# 2. Test locally
 npm install
 npm start
 
-# 3. Se funcionar local, limpar cache do Render:
+# 3. If it works locally, clear Render cache:
 # Settings → Clear build cache & deploy
 ```
 
 ---
 
-### **Problema: App fica em sleep (Free tier)**
+### **Problem: App goes to sleep (Free tier)**
 
-**Sintomas:** 
-- Primeira requisição demora 50s+
-- Render Free Tier dorme após 15min inatividade
+**Symptoms:** 
+- First request takes 50s+
+- Render Free Tier sleeps after 15min inactivity
 
-**Soluções:**
+**Solutions:**
 
-**Opção 1: Upgrade para Starter ($7/mês)**
+**Option 1: Upgrade to Starter ($7/month)**
 - Zero downtime
-- Sempre online
+- Always online
 
-**Opção 2: Keep-alive service (Free)**
+**Option 2: Keep-alive service (Free)**
 ```bash
-# Use serviço tipo UptimeRobot ou Cron-job.org
-# Fazer ping a cada 10 minutos em /health
+# Use a service like UptimeRobot or Cron-job.org
+# Ping /health every 10 minutes
 ```
 
-**Opção 3: Avisar usuários**
+**Option 3: Warn users**
 ```javascript
-// Adicionar no README:
-"⚠️ Free tier: primeira requisição pode demorar ~30s"
+// Add to README:
+"⚠️ Free tier: first request may take ~30s"
 ```
 
 ---
 
-## 📊 Status dos Workflows
+## 📊 Workflow Status
 
 ### **CI (Continuous Integration)**
 
-Roda em **TODOS** os pushes e PRs:
+Runs on **ALL** pushes and PRs:
 
 ```yaml
 ✅ Lint & Syntax Check
@@ -282,58 +282,58 @@ Roda em **TODOS** os pushes e PRs:
 
 ### **CD (Continuous Deployment)**
 
-Roda **APENAS** em pushes na `main`:
+Runs **ONLY** on pushes to `main`:
 
 ```yaml
 ✅ Trigger Render Deploy Hook
-✅ Notificação de sucesso
+✅ Success notification
 ```
 
 ---
 
-## 🎯 Checklist de Configuração
+## 🎯 Configuration Checklist
 
-Antes de fazer o primeiro deploy, confirme:
+Before first deploy, confirm:
 
-- [ ] Conta criada no Render.com
-- [ ] Repositório GitHub conectado no Render
-- [ ] Web Service criado no Render
-- [ ] `UPSTASH_REDIS_URL` configurado no Render
-- [ ] `TRUST_PROXY=1` configurado no Render
-- [ ] `NODE_ENV=production` configurado no Render
-- [ ] Deploy Hook URL copiado do Render
-- [ ] Secret `RENDER_DEPLOY_HOOK_URL` adicionado no GitHub
-- [ ] Workflows `.github/workflows/ci.yml` e `cd.yml` commitados
-- [ ] Primeiro push na main realizado
+- [ ] Account created on Render.com
+- [ ] GitHub repository connected on Render
+- [ ] Web Service created on Render
+- [ ] `UPSTASH_REDIS_URL` configured on Render
+- [ ] `TRUST_PROXY=1` configured on Render
+- [ ] `NODE_ENV=production` configured on Render
+- [ ] Deploy Hook URL copied from Render
+- [ ] Secret `RENDER_DEPLOY_HOOK_URL` added on GitHub
+- [ ] Workflows `.github/workflows/ci.yml` and `cd.yml` committed
+- [ ] First push to main completed
 
 ---
 
-## 🚀 Exemplo Completo de Deploy
+## 🚀 Complete Deploy Example
 
 ```bash
-# 1. Fazer mudança no código
+# 1. Make code change
 vim src/index.js
 
-# 2. Commitar
+# 2. Commit
 git add .
-git commit -m "feat: adicionar novo endpoint"
+git commit -m "feat: add new endpoint"
 
-# 3. Push para main
+# 3. Push to main
 git push origin main
 
-# 4. Acompanhar progresso
+# 4. Follow progress
 # GitHub: https://github.com/Lucas3133/atlas-rate-limiter/actions
 # Render: https://dashboard.render.com
 
-# 5. Testar após deploy
+# 5. Test after deploy
 curl https://atlas-rate-limiter.onrender.com/health
 
-# 6. 🎉 PRONTO!
+# 6. 🎉 DONE!
 ```
 
 ---
 
-## 📚 Recursos Adicionais
+## 📚 Additional Resources
 
 - [Render Docs](https://render.com/docs)
 - [GitHub Actions Docs](https://docs.github.com/en/actions)
@@ -342,18 +342,18 @@ curl https://atlas-rate-limiter.onrender.com/health
 
 ---
 
-## 🆘 Suporte
+## 🆘 Support
 
-**Problemas com o projeto?**
-- 🐛 Abra uma issue: https://github.com/Lucas3133/atlas-rate-limiter/issues
-- 📧 Contato: [seu-email@exemplo.com]
+**Issues with the project?**
+- 🐛 Open an issue: https://github.com/Lucas3133/atlas-rate-limiter/issues
+- 📧 Contact: [your-email@example.com]
 
-**Problemas com Render/GitHub?**
+**Issues with Render/GitHub?**
 - Render Support: https://render.com/support
 - GitHub Discussions: https://github.com/orgs/community/discussions
 
 ---
 
-**Última atualização**: 2025-12-06  
-**Versão**: 1.0.1  
+**Last updated**: 2025-12-06  
+**Version**: 1.0.1  
 **Status**: ✅ Production Ready
