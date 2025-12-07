@@ -75,7 +75,7 @@ git push origin main
 # ✅ Automatic deployment via GitHub Actions!
 ```
 
-📚 **Complete Guide**: [CI_CD_SETUP.md](CI_CD_SETUP.md)
+📚 **Complete Guide**: [CI_CD_SETUP.md](docs/CI_CD_SETUP.md)
 
 ### Railway / Render / Vercel
 ```bash
@@ -111,7 +111,7 @@ npm start
 node tests/load/loadTest.js
 ```
 
-📚 **Complete Testing Guide**: [TESTING.md](TESTING.md)
+📚 **Complete Testing Guide**: [TESTING.md](docs/TESTING.md)
 
 ---
 
@@ -128,7 +128,7 @@ node tests/load/loadTest.js
 - API key hashing (SHA-256)
 - Anti IP-spoofing
 
-📄 **Bug Fix Report**: [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md)
+
 
 ---
 
@@ -161,7 +161,7 @@ node tests/load/loadTest.js
          (has tokens)              (no tokens)
 ```
 
-📚 **Detailed Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+📚 **Detailed Architecture**: [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
@@ -186,12 +186,11 @@ atlas_response_time_ms           # Response time (p50, p95, p99)
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Technical architecture & decisions |
-| [DEPLOY.md](DEPLOY.md) | Deployment guides (5 platforms) |
-| [TESTING.md](TESTING.md) | Complete testing checklist |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture & decisions |
+| [DEPLOY.md](docs/DEPLOY.md) | Deployment guides (5 platforms) |
+| [TESTING.md](docs/TESTING.md) | Complete testing checklist |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
-| [CI_CD_SETUP.md](CI_CD_SETUP.md) | CI/CD configuration |
-| [BUGFIXES_REPORT.md](BUGFIXES_REPORT.md) | Security fixes report |
+| [CI_CD_SETUP.md](docs/CI_CD_SETUP.md) | CI/CD configuration |
 
 ---
 
