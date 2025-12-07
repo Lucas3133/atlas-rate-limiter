@@ -68,66 +68,23 @@ function hashApiKey(apiKey) {
 /**
  * Extracts real client IP with anti-spoofing
  * 
- * When behind proxy/CDN (Cloudflare, ELB, nginx):
- * - X-Forwarded-For can be manipulated
- * - Get the FIRST IP (real client, not intermediate proxies)
- * - Sanitize to avoid injection
+ * Uses Express 'trust proxy' setting to securely determine the IP.
+ * - If trust proxy is false (default): Ignores headers, uses connection IP.
+ * - If trust proxy is true/configured: Parses X-Forwarded-For securely.
  * 
  * @param {Request} req - Express request object
  * @returns {string} Client IP
  */
 function extractClientIP(req) {
-    // ============================================================
-    // BEHIND PROXY/CDN
-    // ============================================================
-    // X-Forwarded-For: client, proxy1, proxy2
-    // We only want 'client' (first)
+    // A MÁGICA DE ARQUITETO:
+    // O Express já popula o req.ip corretamente baseado na config do index.js
+    // Não precisamos reinventar a roda lendo headers na mão.
 
-    const forwardedFor = req.headers['x-forwarded-for'];
-    if (forwardedFor) {
-        // Get first entry from list (original client)
-        const ips = forwardedFor.split(',').map(ip => ip.trim());
-        const clientIP = ips[0];
-
-        // Basic IP validation
-        if (isValidIP(clientIP)) {
-            return clientIP;
-        }
-    }
-
-    // X-Real-IP (used by nginx)
-    const realIP = req.headers['x-real-ip'];
-    if (realIP && isValidIP(realIP)) {
-        return realIP;
-    }
-
-    // ============================================================
-    // DIRECT CONNECTION (no proxy)
-    // ============================================================
-    // BUG FIX: Null checks for serverless/HTTP2 environments
-    const directIP = req.ip ||
+    const clientIP = req.ip ||
         (req.connection && req.connection.remoteAddress) ||
-        (req.socket && req.socket.remoteAddress) ||
         'unknown';
 
-    return sanitizeIP(directIP);
-}
-
-/**
- * Validates if string is a valid IP (basic)
- * @param {string} ip
- * @returns {boolean}
- */
-function isValidIP(ip) {
-    if (!ip) return false;
-
-    // IPv4: xxx.xxx.xxx.xxx
-    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-
-    // IPv6: simplified (complete validation is complex)
-    const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
-
-    return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+    return sanitizeIP(clientIP);
 }
 
 /**
